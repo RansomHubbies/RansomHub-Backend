@@ -63,6 +63,9 @@ jobs:
           source venv/bin/activate
           python manage.py collectstatic --noinput
 
-      - name: Restart Gunicorn service
+      - name: Restart Gunicorn Service
         run: |
+          sudo systemctl daemon-reload
           sudo systemctl restart gunicorn
+        env:
+          DJANGO_SETTINGS_MODULE: backend.settings
