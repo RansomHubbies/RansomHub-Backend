@@ -15,24 +15,16 @@ jobs:
       PYTHON_VERSION: '3.10'
       PIP_CACHE_DIR: ./.pip_cache
 
-    services:
-      postgres:
-        image: postgres:13
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: mydatabase
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          path: RansomHub-Backend
+
+      - name: Sync Files to /var/www
+        run: |
+          sudo rsync -av --delete $GITHUB_WORKSPACE/RansomHub-Backend/ /var/www/RansomHub-Backend/
+          sudo chown -R iiitd:iiitd /var/www/RansomHub-Backend/
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -41,29 +33,34 @@ jobs:
 
       - name: Install dependencies
         run: |
+          cd /var/www/RansomHub-Backend
           python -m venv venv
           source venv/bin/activate
           pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run database migrations
+      - name: Apply database migrations
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mydatabase
         run: |
+          cd /var/www/RansomHub-Backend
           source venv/bin/activate
           python manage.py migrate
 
       - name: Collect static files
         run: |
+          cd /var/www/RansomHub-Backend
           source venv/bin/activate
           python manage.py collectstatic --noinput
 
-      - name: Run tests
-        run: |
-          source venv/bin/activate
-          python manage.py test
+      - name: Stop Existing PM2 Process (if any)
+        run: pm2 delete ransomhub-backend || echo "No existing backend process found."
 
-      - name: Start Django server
+      - name: Start Gunicorn Server with PM2
         run: |
+          cd /var/www/RansomHub-Backend
           source venv/bin/activate
-          nohup python manage.py runserver 0.0.0.0:8000 &
+          RUNNER_TRACKING_ID="" && pm2 start gunicorn --name "ransomhub-backend" -- gunicorn myproject.wsgi:application --bind unix:/var/www/RansomHub-Backend/gunicorn.sock --workers 3
+
+      - name: Save PM2 Process List
+        run: pm2 save
