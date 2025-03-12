@@ -53,14 +53,7 @@ jobs:
           source venv/bin/activate
           python manage.py collectstatic --noinput
 
-      - name: Stop Existing PM2 Process (if any)
-        run: pm2 delete ransomhub-backend || echo "No existing backend process found."
-
-      - name: Start Gunicorn Server with PM2
+      - name: Start Gunicorn Server with systemd
         run: |
-          cd /var/www/RansomHub-Backend
-          source venv/bin/activate
-          RUNNER_TRACKING_ID="" && pm2 start gunicorn --name "ransomhub-backend" -- gunicorn myproject.wsgi:application --bind unix:/var/www/RansomHub-Backend/gunicorn.sock --workers 3
-
-      - name: Save PM2 Process List
-        run: pm2 save
+          sudo systemctl restart gunicorn
+        
