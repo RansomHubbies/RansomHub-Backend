@@ -31,10 +31,20 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
+      - name: Remove old virtual environment (if exists)
+        run: |
+          if [ -d "/var/www/RansomHub-Backend/venv" ]; then
+            rm -rf /var/www/RansomHub-Backend/venv
+          fi
+
+      - name: Create a new virtual environment
+        run: |
+          cd /var/www/RansomHub-Backend
+          python3 -m venv venv
+
       - name: Install dependencies
         run: |
           cd /var/www/RansomHub-Backend
-          python -m venv venv
           source venv/bin/activate
           pip install --upgrade pip
           pip install -r requirements.txt
@@ -53,7 +63,6 @@ jobs:
           source venv/bin/activate
           python manage.py collectstatic --noinput
 
-      - name: Start Gunicorn Server with systemd
+      - name: Restart Gunicorn service
         run: |
           sudo systemctl restart gunicorn
-        
