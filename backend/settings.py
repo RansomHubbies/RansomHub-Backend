@@ -25,7 +25,8 @@ SECRET_KEY = 'django-insecure-zqnyw=-wzr86$00ie+4cws7ag1vxdf@z(@4q(&)=4o5u3jwash
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost','192.168.2.233','192.168.48.121']
+# ALLOWED_HOSTS = ['localhost','192.168.2.233','192.168.48.121', '127.0.0.1:8000',]
+ALLOWED_HOSTS = ["*"]
 
 AUTH_USER_MODEL='users.CustomUser'
 # Application definition
@@ -33,6 +34,7 @@ AUTH_USER_MODEL='users.CustomUser'
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
+    'rest_framework.authtoken',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
@@ -41,9 +43,13 @@ INSTALLED_APPS = [
     'users',
     'admins',
 ]
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -52,8 +58,11 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # Add production URL when deployed
+]
 ROOT_URLCONF = 'backend.urls'
-
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -72,6 +81,16 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'backend.wsgi.application'
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': [
+        # 'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.AllowAny',
+    ]
+}
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
@@ -124,7 +143,18 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
-STATIC_ROOT = "/var/www/RansomHub-Backend/static/"
+STATIC_ROOT=BASE_DIR/ 'static'
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+#production
+# STATIC_ROOT = "/var/www/RansomHub-Backend/static/"  
+
+
+
+
+#Production
+# MEDIA_ROOT = "/var/www/RansomHub-Backend/media/"  
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
