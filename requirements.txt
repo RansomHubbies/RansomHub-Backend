@@ -5,3 +5,4 @@ Pillow
 whitenoise
 gunicorn==23.0.0
 pip install django-cors-headers
+pip install djangorestframework-simplejwt

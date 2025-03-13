@@ -5,8 +5,9 @@ import random
 class CustomUser(AbstractUser):
     email = models.EmailField(unique=True)
     is_verified = models.BooleanField(default=False)
+    phone = models.CharField(max_length=10, null=True, blank=True)
     profile_picture = models.ImageField(upload_to="profile_pics/", null=True, blank=True)
-    otp = models.CharField(max_length=6, blank=True, null=True)  # Stores OTP for verification
+    otp = models.CharField(max_length=6, blank=True, null=True)  
     groups = models.ManyToManyField(
         Group,
         related_name="customuser_set",

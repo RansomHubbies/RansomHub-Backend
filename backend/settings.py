@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
-
+from datetime import timedelta
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -34,6 +34,7 @@ AUTH_USER_MODEL='users.CustomUser'
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
+    'rest_framework_simplejwt.token_blacklist',
     'rest_framework.authtoken',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -85,11 +86,19 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.TokenAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': [
         # 'rest_framework.permissions.IsAuthenticated',
         'rest_framework.permissions.AllowAny',
     ]
+}
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),  # Access token expires in 15 min
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7), 
+    'BLACKLIST_AFTER_ROTATION': True,  # Enable token blacklisting
+    'ROTATE_REFRESH_TOKENS': True,     # Rotate refresh tokens after use
+    # other settings...
 }
 
 # Database
@@ -151,7 +160,8 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # STATIC_ROOT = "/var/www/RansomHub-Backend/static/"  
 
 
-
+CORS_ALLOW_CREDENTIALS = True  # For cross-domain cookies
+CORS_EXPOSE_HEADERS = ['Content-Type', 'Authorization']
 
 #Production
 # MEDIA_ROOT = "/var/www/RansomHub-Backend/media/"  
