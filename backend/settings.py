@@ -191,6 +191,6 @@ EMAIL_HOST_PASSWORD = 'eksvvyqulsanjjlz'
 CSRF_COOKIE_NAME = "csrftoken"
 CSRF_COOKIE_SECURE = True  # Set to False if using HTTP for testing
 CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to read CSRF cookie
-CSRF_COOKIE_SAMESITE = "Lax"  # Prevent cross-site request forgery
-
+# CSRF_COOKIE_SAMESITE = "Lax"  # Prevent cross-site request forgery
+CORS_ALLOW_CREDENTIALS = True
 CSRF_USE_SESSIONS = False  # Keep CSRF stored in cookies
