@@ -11,7 +11,9 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
+
 import random
+import os
 User = get_user_model()
 
 @api_view(['POST'])
@@ -44,10 +46,6 @@ def signup_view(request):
         "email": user.email
     }, status=status.HTTP_201_CREATED)
 
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
-from django.views.decorators.csrf import csrf_exempt
 
 @csrf_exempt
 @api_view(['POST'])
@@ -155,7 +153,7 @@ def logout_view(request):
         refresh_token = request.data.get('refresh_token', None)
         if refresh_token:
             try:
-                from rest_framework_simplejwt.tokens import RefreshToken
+
                 RefreshToken(refresh_token).blacklist()
             except Exception as e:
                 return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
@@ -175,17 +173,18 @@ def profile_view(request):
     """
     Returns user profile data (username, email, profileImage).
     """
+
     user = request.user
+    if(user.profile_picture):
+        image_url = request.build_absolute_uri(user.profile_picture.url)
     data = {
         "username": user.username,
         "email": user.email,
-        "profileImage": user.profile_picture.url if user.profile_picture else "/default-profile.png"
+        "profileImage": image_url if user.profile_picture else "/default-profile.png"
     }
     return Response(data)
 
 
-
-# @permission_classes([IsAuthenticated])
 @api_view(['POST'])
 def refresh_token(request):
     try:
@@ -274,3 +273,45 @@ def send_reset_otp(request):
     )
 
     return Response({"message": "OTP sent to your email."}, status=status.HTTP_200_OK)
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def update_username(request):
+    user = request.user
+    new_username = request.data.get("username")
+
+    if not new_username:
+        return Response({"error": "Username is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if User.objects.filter(username=new_username).exists():
+        return Response({"error": "This username is already taken."}, status=status.HTTP_409_CONFLICT)
+
+    user.username = new_username
+    user.save()
+
+    return Response({"message": "Username updated successfully.", "username": user.username}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def upload_image(request):
+    user = request.user
+    profile_image = request.FILES.get('profile_image')
+
+    if not profile_image:
+        return Response({"error": "Profile image is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    valid_extensions = ['.jpg', '.jpeg', '.png']
+    file_extension = os.path.splitext(profile_image.name)[1].lower()
+
+    if file_extension not in valid_extensions:
+        return Response({"error": "Invalid file type. Only JPEG, JPG, and PNG are allowed."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if profile_image.size > 5 * 1024 * 1024:
+        return Response({"error": "File size exceeds 5MB. "}, status=status.HTTP_400_BAD_REQUEST)
+
+    user.profile_picture = profile_image
+    user.save()
+    image_url = request.build_absolute_uri(user.profile_picture.url)
+    return Response({"message": "Profile image uploaded successfully.", "profileImage": image_url}, status=status.HTTP_200_OK)
