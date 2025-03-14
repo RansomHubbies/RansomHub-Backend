@@ -54,7 +54,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    # 'django.middleware.csrf.CsrfViewMiddleware',  ## will make this change later
+    'django.middleware.csrf.CsrfViewMiddleware', 
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -177,6 +177,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CSRF_TRUSTED_ORIGINS = [
     "https://192.168.2.233",  # Add your frontend domain here
+    "http://192.168.2.233",  # Add your frontend domain here
 ]
 
 
@@ -186,3 +187,10 @@ EMAIL_USE_TLS = True
 EMAIL_PORT = 587
 EMAIL_HOST_USER = 'ecesoclabs@iiitd.ac.in'
 EMAIL_HOST_PASSWORD = 'eksvvyqulsanjjlz'
+
+CSRF_COOKIE_NAME = "csrftoken"
+CSRF_COOKIE_SECURE = True  # Set to False if using HTTP for testing
+CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to read CSRF cookie
+CSRF_COOKIE_SAMESITE = "Lax"  # Prevent cross-site request forgery
+
+CSRF_USE_SESSIONS = False  # Keep CSRF stored in cookies
