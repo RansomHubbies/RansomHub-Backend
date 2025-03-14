@@ -175,6 +175,12 @@ MEDIA_ROOT = "/var/www/RansomHub-Backend/media/"
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://192.168.2.233",  # Add your frontend domain here
+]
+
+
+
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_USE_TLS = True
 EMAIL_PORT = 587

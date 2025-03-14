@@ -99,7 +99,7 @@ def send_otp_email(email, otp):
     """
     subject = "Your OTP for Account Verification"
     message = f"Your OTP is: {otp}. Please enter it in the app to verify your account."
-    sender_email = "your-email@example.com"  
+    sender_email = "ecesoclabs@iiitd.ac.in"  
     send_mail(subject, message, sender_email, [email])
 
 @api_view(['POST'])
