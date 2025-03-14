@@ -55,6 +55,7 @@ jobs:
         run: |
           cd /var/www/RansomHub-Backend
           source venv/bin/activate
+          python manage.py makemigrations
           python manage.py migrate
 
       - name: Collect static files
