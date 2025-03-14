@@ -75,9 +75,6 @@ def verify_otp(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def resendotp(request):
-    """
-    Resend OTP View: Generates and resends OTP.
-    """
     email = request.data.get("email")
     user = CustomUser.objects.filter(email=email).first()
 
@@ -94,16 +91,13 @@ def resendotp(request):
 
 
 def send_otp_email(email, otp):
-    """
-    Function to send OTP via email.
-    """
     subject = "Your OTP for Account Verification"
     message = f"Your OTP is: {otp}. Please enter it in the app to verify your account."
     sender_email = "ecesoclabs@iiitd.ac.in"  
     send_mail(subject, message, sender_email, [email])
 
 @api_view(['POST'])
-@permission_classes([AllowAny])  # Allow any user to try to log in
+@permission_classes([AllowAny])  
 def login(request):
     email = request.data.get("email")
     password = request.data.get("password")
@@ -117,8 +111,8 @@ def login(request):
         access_token = refresh.access_token
         return Response({
             "message": "Login successful",
-            "access_token": str(access_token),  # Send access token as response
-            "refresh_token": str(refresh),  # Optional: Send refresh token as well
+            "access_token": str(access_token), 
+            "refresh_token": str(refresh),  
             "email": user.email,
             "username": user.username
         }, status=200)
@@ -126,7 +120,7 @@ def login(request):
         return Response({"error": "Invalid email or password"}, status=401)
     
 @api_view(['POST'])
-@permission_classes([AllowAny])  # Allow any user to try to log in
+@permission_classes([AllowAny])  
 def reset_password(request):
     email = request.data.get("email")
     user = CustomUser.objects.filter(email=email).first()
@@ -135,8 +129,8 @@ def reset_password(request):
     access_token = refresh.access_token
     return Response({
         "message": "Login successful",
-        "access_token": str(access_token),  # Send access token as response
-        "refresh_token": str(refresh),  # Optional: Send refresh token as well
+        "access_token": str(access_token),  
+        "refresh_token": str(refresh), 
         "email": user.email,
         "username": user.username
     }, status=200)
@@ -158,7 +152,6 @@ def logout_view(request):
             except Exception as e:
                 return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Session Logout (for session-based authentication)
         logout(request)
 
         return Response({"message": "Successfully logged out."}, status=status.HTTP_200_OK)
@@ -194,24 +187,21 @@ def refresh_token(request):
         if not refresh_token:
             return Response({"error": "Refresh token is required."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Decode refresh token to get the user
         try:
             token = RefreshToken(refresh_token)
-            user_id = token.payload.get("user_id")  # Extract user ID from token payload
-            user = User.objects.get(id=user_id)  # Fetch user from DB
+            user_id = token.payload.get("user_id")  
+            user = User.objects.get(id=user_id) 
         except TokenError:
             return Response({"error": "Invalid refresh token."}, status=status.HTTP_403_FORBIDDEN)
         except User.DoesNotExist:
             return Response({"error": "User not found."}, status=status.HTTP_403_FORBIDDEN)
 
-        # Generate a new refresh token for the user
         new_refresh = RefreshToken.for_user(user)
 
-        # Blacklist the old refresh token *after* issuing a new one
         try:
             token.blacklist()
         except AttributeError:
-            pass  # If token blacklisting is not enabled, skip this step
+            pass  
 
         return Response({
             "access_token": str(new_refresh.access_token),
@@ -232,13 +222,12 @@ def reset_password_confirm(request):
     try:
         user = User.objects.get(email=email)
 
-        # Check if OTP matches
         if str(user.otp) != str(otp):
             return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
 
         # Reset password
         user.password = make_password(new_password)
-        user.reset_otp = None  # Clear OTP after use
+        user.reset_otp = None 
         user.save()
 
         return Response({"message": "Password reset successfully."}, status=status.HTTP_200_OK)
@@ -257,14 +246,11 @@ def send_reset_otp(request):
     except User.DoesNotExist:
         return Response({"error": "User with this email does not exist."}, status=status.HTTP_404_NOT_FOUND)
 
-    # Generate OTP (6-digit random number)
     otp = random.randint(100000, 999999)
 
-    # Store OTP in the user model or a separate OTP table
     user.otp = otp
     user.save()
 
-    # Send OTP via email
     send_mail(
         "Password Reset OTP",
         f"Your OTP for password reset is: {otp}",
