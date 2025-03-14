@@ -9,8 +9,9 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
-
+from datetime import timedelta
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,7 +26,8 @@ SECRET_KEY = 'django-insecure-zqnyw=-wzr86$00ie+4cws7ag1vxdf@z(@4q(&)=4o5u3jwash
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost','192.168.2.233','192.168.48.121']
+ALLOWED_HOSTS = ['localhost','192.168.2.233','192.168.48.121', '127.0.0.1:8000',]
+# ALLOWED_HOSTS = ["*"]
 
 AUTH_USER_MODEL='users.CustomUser'
 # Application definition
@@ -33,6 +35,8 @@ AUTH_USER_MODEL='users.CustomUser'
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
+    'rest_framework_simplejwt.token_blacklist',
+    'rest_framework.authtoken',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
@@ -41,9 +45,13 @@ INSTALLED_APPS = [
     'users',
     'admins',
 ]
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -52,8 +60,14 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+CORS_ALLOWED_ORIGINS = [
+    "http:/192.168.2.233",
+    "https:/192.168.2.233",
+    "http://localhost:3000",  # Add production URL when deployed
+]
 ROOT_URLCONF = 'backend.urls'
-
+# EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -72,6 +86,24 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'backend.wsgi.application'
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': [
+        # 'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.AllowAny',
+    ]
+}
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),  # Access token expires in 15 min
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7), 
+    'BLACKLIST_AFTER_ROTATION': True,  # Enable token blacklisting
+    'ROTATE_REFRESH_TOKENS': True,     # Rotate refresh tokens after use
+    # other settings...
+}
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
@@ -124,9 +156,27 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
-STATIC_ROOT = "/var/www/RansomHub-Backend/static/"
+# STATIC_ROOT=BASE_DIR/ 'static'
+MEDIA_URL = '/media/'
+# MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+#production
+STATIC_ROOT = "/var/www/RansomHub-Backend/static/"  
+
+
+CORS_ALLOW_CREDENTIALS = True  # For cross-domain cookies
+CORS_EXPOSE_HEADERS = ['Content-Type', 'Authorization']
+
+#Production
+MEDIA_ROOT = "/var/www/RansomHub-Backend/media/"  
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_USE_TLS = True
+EMAIL_PORT = 587
+EMAIL_HOST_USER = 'ecesoclabs@iiitd.ac.in'
+EMAIL_HOST_PASSWORD = 'eksvvyqulsanjjlz'

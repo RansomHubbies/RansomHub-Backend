@@ -1,11 +1,13 @@
 from django.contrib.auth.models import AbstractUser, Group, Permission
 from django.db import models
+import random
 
 class CustomUser(AbstractUser):
     email = models.EmailField(unique=True)
     is_verified = models.BooleanField(default=False)
+    phone = models.CharField(max_length=10, null=True, blank=True)
     profile_picture = models.ImageField(upload_to="profile_pics/", null=True, blank=True)
-
+    otp = models.CharField(max_length=6, blank=True, null=True)  
     groups = models.ManyToManyField(
         Group,
         related_name="customuser_set",
@@ -19,9 +21,13 @@ class CustomUser(AbstractUser):
         blank=True,
         help_text="Specific permissions for this user."
     )
-
     def __str__(self):
-        return self.username
+        return self.email
+    
+    def generate_otp(self):
+        """Generates a 6-digit OTP"""
+        self.otp = str(random.randint(100000, 999999))
+        self.save()
 
 
 
