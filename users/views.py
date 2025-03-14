@@ -177,6 +177,7 @@ def profile_view(request):
     user = request.user
     if(user.profile_picture):
         image_url = request.build_absolute_uri(user.profile_picture.url)
+        image_url = image_url.replace("http://", "https://")
     data = {
         "username": user.username,
         "email": user.email,
@@ -314,4 +315,5 @@ def upload_image(request):
     user.profile_picture = profile_image
     user.save()
     image_url = request.build_absolute_uri(user.profile_picture.url)
+    image_url = image_url.replace("http://", "https://")
     return Response({"message": "Profile image uploaded successfully.", "profileImage": image_url}, status=status.HTTP_200_OK)
