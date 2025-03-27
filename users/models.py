@@ -14,7 +14,7 @@ class CustomUser(AbstractUser):
         blank=True,
         help_text="The groups this user belongs to."
     )
-
+    is_suspended = models.BooleanField(default=False)
     user_permissions = models.ManyToManyField(
         Permission,
         related_name="customuser_set",

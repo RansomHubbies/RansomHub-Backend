@@ -22,6 +22,7 @@ from rest_framework.authtoken.views import obtain_auth_token
 
 urlpatterns = [
     path('api/admin/', admin.site.urls),
+    path('api/admins/', include('admins.urls')),
     path('api-token-auth/', obtain_auth_token, name='api_token_auth'),
     path('api/users/', include('users.urls')),
     path('api/marketplace/', include('marketplace.urls')),

@@ -11,6 +11,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
+from admins.models import create_activity_log
+
 
 import random
 import os
@@ -38,6 +40,12 @@ def signup_view(request):
 
     print(name,username,password, email,phone)
     user = CustomUser.objects.create_user(username=username, first_name=name, email=email, password=password)
+    create_activity_log(
+        user=user, 
+        action_type='USER_REGISTRATION', 
+        description='New user registered',
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
     user.generate_otp()
     send_otp_email(user.email, user.otp)
 
@@ -181,7 +189,8 @@ def profile_view(request):
     data = {
         "username": user.username,
         "email": user.email,
-        "profileImage": image_url if user.profile_picture else "/default-profile.png"
+        "profileImage": image_url if user.profile_picture else "/default-profile.png",
+        "is_admin":user.is_superuser
     }
     return Response(data)
 
@@ -240,7 +249,12 @@ def reset_password_confirm(request):
         user.password = make_password(new_password)
         user.reset_otp = None  # Clear OTP after use
         user.save()
-
+        create_activity_log(
+            user=user, 
+            action_type='PASSWORD_CHANGE', 
+            description='Password Change',
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
         return Response({"message": "Password reset successfully."}, status=status.HTTP_200_OK)
     except User.DoesNotExist:
         return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
