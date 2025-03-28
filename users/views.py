@@ -331,3 +331,20 @@ def upload_image(request):
     image_url = request.build_absolute_uri(user.profile_picture.url)
     image_url = image_url.replace("http://", "https://")
     return Response({"message": "Profile image uploaded successfully.", "profileImage": image_url}, status=status.HTTP_200_OK)
+
+# write API to return all the users
+@api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+def get_users(request):
+    users = CustomUser.objects.all()
+    # I want to return names and email and contact and username of all the users
+    user_list = []
+    for user in users:
+        user_list.append({
+            "name": user.first_name,
+            "email": user.email,
+            "contact": user.phone,
+            "username": user.username
+        })
+
+    return Response(user_list, status=status.HTTP_200_OK)

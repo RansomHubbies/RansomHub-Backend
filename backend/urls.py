@@ -26,6 +26,7 @@ urlpatterns = [
     path('api-token-auth/', obtain_auth_token, name='api_token_auth'),
     path('api/users/', include('users.urls')),
     path('api/marketplace/', include('marketplace.urls')),
+    path('api/chat/', include('chat.urls'), name='chat'),
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
