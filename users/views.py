@@ -340,6 +340,9 @@ def get_users(request):
     # I want to return names and email and contact and username of all the users
     user_list = []
     for user in users:
+        if user.is_superuser:
+            continue
+
         user_list.append({
             "name": user.first_name,
             "email": user.email,
