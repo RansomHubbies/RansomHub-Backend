@@ -24,10 +24,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-zqnyw=-wzr86$00ie+4cws7ag1vxdf@z(@4q(&)=4o5u3jwash'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
-
-ALLOWED_HOSTS = ['localhost','192.168.2.233','192.168.48.121', '127.0.0.1:8000',]
-# ALLOWED_HOSTS = ["*"]
 
 AUTH_USER_MODEL='users.CustomUser'
 # Application definition
@@ -61,11 +57,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOWED_ORIGINS = [
-    "http:/192.168.2.233",
-    "https:/192.168.2.233",
-    "http://localhost:3000",  # Add production URL when deployed
-]
 ROOT_URLCONF = 'backend.urls'
 # EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
@@ -176,9 +167,18 @@ MEDIA_ROOT = "/var/www/RansomHub-Backend/media/"
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+CORS_ALLOWED_ORIGINS = [
+    "http:/192.168.2.233",
+    "https:/192.168.2.233",
+    # "http://localhost:3000",  # Add production URL when deployed
+    # "http://127.0.0.1:3000",  # Add production URL when deployed
+]
+
 CSRF_TRUSTED_ORIGINS = [
     "https://192.168.2.233",  # Add your frontend domain here
     "http://192.168.2.233",  # Add your frontend domain here
+    # "http://127.0.0.1:3000",  # Add production URL when deployed
+
 ]
 
 
@@ -195,3 +195,8 @@ CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to read CSRF cookie
 CSRF_COOKIE_SAMESITE = "Lax"  # Prevent cross-site request forgery
 CORS_ALLOW_CREDENTIALS = True
 CSRF_USE_SESSIONS = False  # Keep CSRF stored in cookies
+
+DEBUG = False
+
+ALLOWED_HOSTS = ['localhost','192.168.2.233','192.168.48.121', '127.0.0.1:8000',]
+# ALLOWED_HOSTS = ["*"]

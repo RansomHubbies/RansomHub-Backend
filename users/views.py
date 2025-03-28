@@ -190,7 +190,8 @@ def profile_view(request):
         "username": user.username,
         "email": user.email,
         "profileImage": image_url if user.profile_picture else "/default-profile.png",
-        "is_admin":user.is_superuser
+        "is_admin":user.is_superuser,
+        "is_approved":user.is_approved
     }
     return Response(data)
 
@@ -331,3 +332,35 @@ def upload_image(request):
     image_url = request.build_absolute_uri(user.profile_picture.url)
     image_url = image_url.replace("http://", "https://")
     return Response({"message": "Profile image uploaded successfully.", "profileImage": image_url}, status=status.HTTP_200_OK)
+
+# In Django views.py
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def verify_identity(request):
+    user = request.user
+    if(user.is_approved):
+        return Response({'error': 'User Already Verified'}, status=400)
+    
+    identity_proof = request.FILES.get('identity_proof')
+        
+    if not identity_proof:
+        return Response({'error': 'No file uploaded'}, status=400)
+    
+    # Validate file type and size
+    allowed_types = ['image/jpeg', 'image/png', 'application/pdf']
+    max_size = 5 * 1024 * 1024  # 5MB
+    
+    if identity_proof.content_type not in allowed_types:
+        return Response({'error': 'Invalid file type'}, status=400)
+    
+    if identity_proof.size > max_size:
+        return Response({'error': 'File too large'}, status=400)
+    
+    user.is_approved=True
+    user.verification_docs=identity_proof
+    user.save()
+    
+    return Response({
+        'message': 'Verification request submitted',
+        'is_approved': True
+    }, status=201)

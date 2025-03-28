@@ -25,7 +25,7 @@ def list_users(request):
             'email', 
             'phone', 
             'username', 
-            'is_verified', 
+            'is_approved', 
             'is_suspended'
         )
         return Response(list(users))
@@ -160,3 +160,103 @@ def create_log_entry(request):
         serializer.save()
         return Response(serializer.data, status=201)
     return Response(serializer.errors, status=400)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminUser])
+def view_verification_docs(request, user_id):
+    """
+    View user verification documents (Admin-only endpoint)
+    """
+    try:
+        # Ensure only superusers can access this endpoint
+        if not request.user.is_superuser:
+            return Response(
+                {"error": "Not a superuser"}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Retrieve the user
+        user = User.objects.get(id=user_id)
+        
+        # Check if verification docs exist
+        if not user.verification_docs:
+            return Response(
+                {"error": "No verification documents found"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Generate the document URL
+        document_url = request.build_absolute_uri(user.verification_docs.url)
+        document_url = document_url.replace("http://", "https://")
+        
+        return Response({
+            "documentUrl": document_url,
+            "userId": user.id,
+            "username": user.username
+        })
+    
+    except User.DoesNotExist:
+        return Response(
+            {"error": "User not found"}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return Response(
+            {"error": str(e)}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated, IsAdminUser])
+def disapprove_user(request, user_id):
+    """
+    Disapprove user (Admin-only endpoint)
+    """
+    try:
+        # Ensure only superusers can access this endpoint
+        if not request.user.is_superuser:
+            return Response(
+                {"error": "Not a superuser"}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Retrieve the user
+        user = User.objects.get(id=user_id)
+        
+        # Prevent disapproving superusers
+        if user.is_superuser:
+            return Response(
+                {"error": "Cannot disapprove superuser"}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Check if user is currently approved
+        if not user.is_approved:
+            user.is_approved = True
+            user.save()
+            return Response({
+                "id": user.id,
+                "is_approved": user.is_approved,
+                "message": "User approved successfully"
+            })
+        
+        # Disapprove the user
+        user.is_approved = False
+        user.save()
+        
+        return Response({
+            "id": user.id,
+            "is_approved": user.is_approved,
+            "message": "User disapproved successfully"
+        })
+    
+    except User.DoesNotExist:
+        return Response(
+            {"error": "User not found"}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return Response(
+            {"error": str(e)}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

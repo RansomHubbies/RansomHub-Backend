@@ -7,7 +7,6 @@ class ActivityLogSerializer(serializers.ModelSerializer):
         fields = [
             'id', 
             'username',
-            'phone'  
             'action_type', 
             'description', 
             'timestamp', 
