@@ -190,11 +190,15 @@ def create_group(request):
     Create a group
     """
     try:
-        # Get the group name and members
         group_name = request.data.get('name')
         members_usernames = request.data.get('members')
 
-        # members is a list of usernames
+        if not isinstance(members_usernames, list):
+            return Response({"error": "Members must be a list of usernames"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if len(members_usernames) < 1 or len(members_usernames) > 20:
+            return Response({"error": "Members must be between 1 and 20"}, status=status.HTTP_400_BAD_REQUEST)
+
         members = CustomUser.objects.filter(username__in=members_usernames)
 
         if not members:
@@ -203,11 +207,14 @@ def create_group(request):
         base_string = group_name + "".join(members_usernames)
         username = hashlib.sha256(base_string.encode()).hexdigest()[:12]
 
+        if Group.objects.filter(username=username).exists():
+            return Response({"error": "Group already exists with same name and members"}, status=status.HTTP_400_BAD_REQUEST)
+
         group = Group.objects.create(username=username, name=group_name)
         group.members.set(members)
         group.save()
 
-        return Response({"message": "Group created"}, status=status.HTTP_201_CREATED)
+        return Response({"message": "Group created", "username": f"{username}"}, status=status.HTTP_201_CREATED)
     
     except CustomUser.DoesNotExist:
         return Response({"error": "Invalid member"}, status=status.HTTP_400_BAD_REQUEST)
