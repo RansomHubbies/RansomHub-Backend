@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_recaptcha',
     'rest_framework',
     'users',
     'admins',
@@ -201,3 +202,6 @@ DEBUG = False
 
 ALLOWED_HOSTS = ['localhost','192.168.2.233','192.168.48.121', '127.0.0.1:8000',]
 # ALLOWED_HOSTS = ["*"]
+
+RECAPTCHA_PUBLIC_KEY ="6LeyqwMrAAAAAA6w1vcznR_GClUqOqBSbnwKjRvh"
+RECAPTCHA_PRIVATE_KEY ="6LeyqwMrAAAAAHw0nOtNVkNBHEO5wYT6Jb9fpfec"

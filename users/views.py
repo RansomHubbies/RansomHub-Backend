@@ -12,11 +12,49 @@ from rest_framework_simplejwt.exceptions import TokenError
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
 from admins.models import create_activity_log
-
+from django_recaptcha.fields import ReCaptchaField
+from django_recaptcha.widgets import ReCaptchaV2Checkbox
+from django.http import JsonResponse
+from backend.settings import RECAPTCHA_PRIVATE_KEY
 
 import random
 import os
+import requests
+
 User = get_user_model()
+
+@api_view(['POST'])
+@permission_classes([AllowAny])  # Since captcha verification should be available to anyone
+def verify_captcha(request):
+    try:
+        # Extract the reCAPTCHA response token sent from the frontend
+        captcha_response = request.data.get('captcha')
+        
+        if not captcha_response:
+            return Response({'success': False, 'error': 'Captcha response is required'}, status=400)
+
+        # Your Google reCAPTCHA secret key
+        secret_key = RECAPTCHA_PRIVATE_KEY
+
+        # Verify the CAPTCHA response by making a request to Google reCAPTCHA API
+        verify_url = "https://www.google.com/recaptcha/api/siteverify"
+        payload = {
+            'secret': secret_key,
+            'response': captcha_response,
+        }
+
+        # Make the API request to Google
+        response = requests.post(verify_url, data=payload)
+        result = response.json()
+
+        # Check if the CAPTCHA verification was successful
+        if result.get('success'):
+            return Response({'success': True})
+        else:
+            return Response({'success': False, 'error': 'Captcha verification failed'}, status=400)
+
+    except Exception as e:
+        return Response({'success': False, 'error': str(e)}, status=500)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
