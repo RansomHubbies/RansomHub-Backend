@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'users',
     'admins',
     'marketplace',
+    'payments',
 ]
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
