@@ -6,6 +6,7 @@ from users.models import CustomUser
 from .messenger import pusher_client
 from .models import Message, Group, GroupMessage
 import hashlib
+from django.utils import timezone
 
 @api_view(['POST'])
 @permission_classes([AllowAny]) # Change to IsAuthenticated after testing or when the frontend is ready
@@ -17,11 +18,11 @@ def send_message(request):
         # Get the sender and recipient
         sender_username = request.data.get('sender')
         recipient_username = request.data.get('recipient')
-        message = request.data.get('message')
-        timestamp = request.data.get('timestamp')
+        message_text = request.data.get('message')
+        timestamp = timezone.now()
 
-        print(sender_username, recipient_username, message, timestamp
-        )
+        if len(message_text) > 256:
+            return Response({"error": "Message too long upto 200 chars are allowed"}, status=status.HTTP_400_BAD_REQUEST)
 
         # verify that the sender and recipient exist
         sender = CustomUser.objects.get(username=sender_username)
@@ -33,17 +34,23 @@ def send_message(request):
         # Send the message
         pusher_client.trigger(
             f'{recipient_username}',
-            f'message',
+            f'{sender_username}',
             {
                 'sender': sender_username,
-                'message': message,
-                'timestamp': timestamp
+                'message': message_text,
+                'timestamp': timestamp.isoformat()
             },
         )
 
         # Save the message
-        message_object = Message.objects.create(sender=sender, recipient=recipient, message=message, timestamp=timestamp)
+        message_object = Message.objects.create(sender=sender, recipient=recipient, message=message_text)
         Message.save(message_object)
+
+        messages = Message.objects.filter(sender=sender, recipient=recipient) | Message.objects.filter(sender=recipient, recipient=sender)
+        messages = messages.order_by('-timestamp')
+
+        if messages.count() > 20:
+            messages[20:].delete()
         
         return Response({"message": "Message sent"}, status=status.HTTP_200_OK)
     
@@ -66,7 +73,10 @@ def send_group_message(request):
         sender_username = request.data.get('sender')
         group_username = request.data.get('group')
         message = request.data.get('message')
-        timestamp = request.data.get('timestamp')
+        timestamp = timezone.now()
+
+        if len(message) > 256:
+            return Response({"error": "Message too long upto 200 chars are allowed"}, status=status.HTTP_400_BAD_REQUEST)
 
         # verify that the sender and group exist
         sender = CustomUser.objects.get(username=sender_username)
@@ -75,24 +85,30 @@ def send_group_message(request):
         if not sender or not group:
             return Response({"error": "Invalid sender or group"}, status=status.HTTP_400_BAD_REQUEST)
         
+        # get the group members
+        members = group.members.all()
 
-        print(f'Sender: {sender_username}, Group: {group_username}, Message: {message}, Timestamp: {timestamp}')
-        
-        
-        # Send the message
-        pusher_client.trigger(
-            f'{group_username}',
-            f'group_message',
-            {
-                'sender': sender_username,
-                'message': message,
-                'timestamp': timestamp
-            },
-        )
+        # Send the message to each member
+        for member in members:
+            pusher_client.trigger(
+                f'{member.username}',
+                f'{group_username}',
+                {
+                    'sender': sender_username,
+                    'message': message,
+                    'timestamp': timestamp.isoformat()
+                },
+            )
 
         # Save the message
         message = GroupMessage.objects.create(sender=sender, group=group, message=message, timestamp=timestamp)
         GroupMessage.save(message)
+
+        messages = GroupMessage.objects.filter(group=group)
+        messages = messages.order_by('-timestamp')
+
+        if messages.count() > 20:
+            messages[20:].delete()
         
         return Response({"message": "Message sent"}, status=status.HTTP_200_OK)
     
@@ -232,6 +248,14 @@ def add_group_members(request):
         members_usernames = request.data.get('members_usernames')
 
         if isinstance(members_usernames, list):
+
+
+            # total number of members in the group should not exceed 20
+            group = Group.objects.get(username=group_username)
+            if group.members.count() + len(members_usernames) > 20:
+                return Response({"error": "Group members should not exceed 20."}, status=status.HTTP_400_BAD_REQUEST)
+
+
             for username in members_usernames:
                 member = CustomUser.objects.get(username=username)
                 group = Group.objects.get(username=group_username)
