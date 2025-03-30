@@ -290,6 +290,24 @@ def add_group_members(request):
 
 @api_view(["GET"])
 def get_groups(requests):
+
+    user = requests.query_params.get("user")
+
+    groups = Group.objects.filter(members__username=user)
+    group_list = []
+
+    for group in groups:
+        group_list.append({
+            "name": group.name,
+            "username": group.username,
+            "members": [member.username for member in group.members.all()]
+        })
+
+    return Response(group_list, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+def get_all_groups(requests):
     groups = Group.objects.all()
     group_list = []
 
