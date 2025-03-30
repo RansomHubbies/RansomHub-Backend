@@ -245,6 +245,7 @@ def create_group(request):
     
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def add_group_members(request):
 
     try:
@@ -289,6 +290,7 @@ def add_group_members(request):
     
 
 @api_view(["GET"])
+@permission_classes([AllowAny])
 def get_groups(requests):
 
     user = requests.query_params.get("user")
@@ -307,6 +309,7 @@ def get_groups(requests):
 
 
 @api_view(["GET"])
+@permission_classes([AllowAny])
 def get_all_groups(requests):
     groups = Group.objects.all()
     group_list = []
