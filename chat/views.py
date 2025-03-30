@@ -90,6 +90,10 @@ def send_group_message(request):
 
         # Send the message to each member
         for member in members:
+
+            if member.username == sender_username:
+                continue
+
             pusher_client.trigger(
                 f'{member.username}',
                 f'{group_username}',
