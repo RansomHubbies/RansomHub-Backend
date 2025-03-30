@@ -46,7 +46,7 @@ def verify_captcha(request):
         # Make the API request to Google
         response = requests.post(verify_url, data=payload)
         result = response.json()
-
+        print(result)
         # Check if the CAPTCHA verification was successful
         if result.get('success'):
             return Response({'success': True})

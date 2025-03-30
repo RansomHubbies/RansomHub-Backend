@@ -8,3 +8,4 @@ django-cors-headers
 djangorestframework-simplejwt
 django-recaptcha
 requests
+pusher
