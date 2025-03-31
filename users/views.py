@@ -334,7 +334,7 @@ def upload_image(request):
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def get_users(request):
     users = CustomUser.objects.all()
     user_list = []
