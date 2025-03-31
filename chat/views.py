@@ -90,6 +90,10 @@ def send_group_message(request):
 
         # Send the message to each member
         for member in members:
+
+            if member.username == sender_username:
+                continue
+
             pusher_client.trigger(
                 f'{member.username}',
                 f'{group_username}',
@@ -241,6 +245,7 @@ def create_group(request):
     
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def add_group_members(request):
 
     try:
@@ -285,7 +290,27 @@ def add_group_members(request):
     
 
 @api_view(["GET"])
+@permission_classes([AllowAny])
 def get_groups(requests):
+
+    user = requests.query_params.get("user")
+
+    groups = Group.objects.filter(members__username=user)
+    group_list = []
+
+    for group in groups:
+        group_list.append({
+            "name": group.name,
+            "username": group.username,
+            "members": [member.username for member in group.members.all()]
+        })
+
+    return Response(group_list, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def get_all_groups(requests):
     groups = Group.objects.all()
     group_list = []
 

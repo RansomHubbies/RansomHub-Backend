@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import send_message, send_group_message, get_group_messages, create_group, get_messages, add_group_members, get_groups
+from .views import send_message, send_group_message, get_group_messages, create_group, get_messages, add_group_members, get_groups, get_all_groups
 
 
 urlpatterns = [
@@ -10,4 +10,5 @@ urlpatterns = [
     path("create_group", create_group, name="create_group"),
     path("add_group_members", add_group_members, name="add_group_members"),
     path("get_groups", get_groups, name="get_groups"),
+    path("get_all_groups", get_all_groups, name="get_all_groups"),
 ]
