@@ -90,8 +90,8 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'social_media_db',
-        'USER': 'postgres',
-        'PASSWORD': 'fcs_postgres',
+        'USER': 'django_user',
+        'PASSWORD': 'secure_password',
         'HOST': 'localhost' ,
         'PORT': '5432',
     }
@@ -150,7 +150,7 @@ CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = "Lax"  
 CORS_ALLOW_CREDENTIALS = True
 CSRF_USE_SESSIONS = False  
-
+SESSION_COOKIE_SAMESITE = 'Lax'
 ROOT_URLCONF = 'backend.urls'
 STATIC_URL = 'static/'
 MEDIA_URL = '/media/'
@@ -162,12 +162,12 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 CSRF_COOKIE_SECURE = False
 CORS_ALLOW_ALL_ORIGINS = True
 #production
-# MEDIA_ROOT = "/var/www/RansomHub-Backend/media/"  
-# STATIC_ROOT = "/var/www/RansomHub-Backend/static/"  
+MEDIA_ROOT = "/var/www/RansomHub-Backend/media/"  
+STATIC_ROOT = "/var/www/RansomHub-Backend/static/"  
 # EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-# CSRF_COOKIE_SECURE = True  
-# CORS_ALLOWED_ORIGINS = [
-#     "http://192.168.2.233",
-#     "https://192.168.2.233",
-#     "http://localhost:3000",  
-# ]
+CSRF_COOKIE_SECURE = True  
+CORS_ALLOWED_ORIGINS = [
+    "http://192.168.2.233",
+    "https://192.168.2.233",
+    "http://localhost:3000",  
+]

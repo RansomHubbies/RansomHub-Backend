@@ -12,11 +12,19 @@ from rest_framework_simplejwt.exceptions import TokenError
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
 from admins.models import create_activity_log
-
+from django.middleware.csrf import get_token
 
 import random
 import os
 User = get_user_model()
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def set_csrf_cookie(request):
+    csrf_token = get_token(request)
+    response = Response({"message": "CSRF cookie set", "csrfToken": csrf_token})
+    response["X-CSRFToken"] = csrf_token
+    return response
 
 @api_view(['POST'])
 @permission_classes([AllowAny])

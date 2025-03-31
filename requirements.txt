@@ -6,3 +6,4 @@ whitenoise
 gunicorn==23.0.0
 django-cors-headers
 djangorestframework-simplejwt
+pusher
