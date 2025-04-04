@@ -322,4 +322,26 @@ def get_all_groups(requests):
         })
 
     return Response(group_list, status=status.HTTP_200_OK)
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def get_user_public_key(requests):
+    try:
+        username = requests.query_params.get("username")
+
+        if not username:
+            return Response({"error": "Username is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = CustomUser.objects.get(username=username)
+
+        if not user:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response({"public_key": user.public_key}, status=status.HTTP_200_OK)
+    
+    except CustomUser.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
