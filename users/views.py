@@ -37,6 +37,7 @@ def signup_view(request):
     email = request.data.get("email")
     password = request.data.get("password")
     phone = request.data.get("phone")
+    public_key = request.data.get("public_key")
 
     if not username or not email or not password or not name:
         return Response({"error": "All fields (username, email, password) are required."}, status=status.HTTP_400_BAD_REQUEST)
@@ -47,7 +48,7 @@ def signup_view(request):
         return Response({"error": "Username not available"}, status=status.HTTP_409_CONFLICT)
 
     print(name,username,password, email,phone)
-    user = CustomUser.objects.create_user(username=username, first_name=name, email=email, password=password)
+    user = CustomUser.objects.create_user(username=username, first_name=name, email=email, password=password, public_key=public_key)
     create_activity_log(
         user=user, 
         action_type='USER_REGISTRATION', 
