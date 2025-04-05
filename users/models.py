@@ -9,7 +9,10 @@ class CustomUser(AbstractUser):
     phone = models.CharField(max_length=10, null=True, blank=True)
     profile_picture = models.ImageField(upload_to="profile_pics/", null=True, blank=True)
     verification_docs = models.ImageField(upload_to="verification_docs/", null=True, blank=True)
-    otp = models.CharField(max_length=6, blank=True, null=True)  
+    otp = models.CharField(max_length=6, blank=True, null=True) 
+    public_key = models.CharField(max_length=256, null=False, blank=False)
+    encrypted_private_key = models.CharField(max_length=256, null=False, blank=False)
+    private_key_salt = models.CharField(max_length=256, null=False, blank=False)
     groups = models.ManyToManyField(
         Group,
         related_name="customuser_set",

@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import signup_view, verify_otp, resendotp, login,logout_view, profile_view, refresh_token,reset_password, reset_password_confirm,send_reset_otp,upload_image, update_username, verify_identity,verify_captcha
+from .views import signup_view, verify_otp, resendotp, login,logout_view, profile_view, refresh_token,reset_password, reset_password_confirm,send_reset_otp,upload_image, update_username, verify_identity,verify_captcha, get_users,set_csrf_cookie
 
 urlpatterns = [
     path('signup/', signup_view, name="signup"),
@@ -16,4 +16,6 @@ urlpatterns = [
     path('update_username/', update_username, name='update_username'),
     path('verify_identity/', verify_identity, name='verify_identity'),
     path('verify-captcha/', verify_captcha, name='verify_captcha'),
+    path('get_users/', get_users, name='get_users'),
+    path('csrf_cookie/', set_csrf_cookie, name='set_csrf_cookie'),
 ]

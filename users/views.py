@@ -16,12 +16,22 @@ from django_recaptcha.fields import ReCaptchaField
 from django_recaptcha.widgets import ReCaptchaV2Checkbox
 from django.http import JsonResponse
 from backend.settings import RECAPTCHA_PRIVATE_KEY
+from django.middleware.csrf import get_token
+
 
 import random
 import os
 import requests
 
 User = get_user_model()
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def set_csrf_cookie(request):
+    csrf_token = get_token(request)
+    response = Response({"message": "CSRF cookie set", "csrfToken": csrf_token})
+    response["X-CSRFToken"] = csrf_token
+    return response
 
 @api_view(['POST'])
 @permission_classes([AllowAny])  # Since captcha verification should be available to anyone
@@ -67,6 +77,12 @@ def signup_view(request):
     email = request.data.get("email")
     password = request.data.get("password")
     phone = request.data.get("phone")
+    public_key = request.data.get("public_key")
+    encrypted_private_key = request.data.get("encrypted_private_key")
+    private_key_salt = request.data.get("private_key_salt")
+
+    if not public_key or not encrypted_private_key or not private_key_salt:
+        return Response({"error": "All fields (public_key, encrypted_private_key, private_key_salt) are required."}, status=status.HTTP_400_BAD_REQUEST)
 
     if not username or not email or not password or not name:
         return Response({"error": "All fields (username, email, password) are required."}, status=status.HTTP_400_BAD_REQUEST)
@@ -77,7 +93,15 @@ def signup_view(request):
         return Response({"error": "Username not available"}, status=status.HTTP_409_CONFLICT)
 
     print(name,username,password, email,phone)
-    user = CustomUser.objects.create_user(username=username, first_name=name, email=email, password=password)
+    user = CustomUser.objects.create_user(
+        username=username, 
+        first_name=name, 
+        email=email, 
+        password=password, 
+        public_key=public_key,
+        encrypted_private_key=encrypted_private_key,
+        private_key_salt=private_key_salt,
+    )
     create_activity_log(
         user=user, 
         action_type='USER_REGISTRATION', 
@@ -160,12 +184,16 @@ def login(request):
         # Generate JWT token for the user
         refresh = RefreshToken.for_user(user)
         access_token = refresh.access_token
+        encrypted_private_key = user.encrypted_private_key
+        private_key_salt = user.private_key_salt
         return Response({
             "message": "Login successful",
             "access_token": str(access_token),  # Send access token as response
             "refresh_token": str(refresh),  # Optional: Send refresh token as well
             "email": user.email,
-            "username": user.username
+            "username": user.username,
+            "encrypted_private_key": encrypted_private_key,
+            "private_key_salt": private_key_salt,
         }, status=200)
     else:
         return Response({"error": "Invalid email or password"}, status=401)
@@ -401,3 +429,21 @@ def verify_identity(request):
         'message': 'Verification request submitted',
         'is_approved': True
     }, status=201)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_users(request):
+    users = CustomUser.objects.all()
+    user_list = []
+    for user in users:
+        if user.is_superuser:
+            continue
+
+        user_list.append({
+            "name": user.first_name,
+            "email": user.email,
+            "contact": user.phone,
+            "username": user.username
+        })
+
+    return Response(user_list, status=status.HTTP_200_OK)

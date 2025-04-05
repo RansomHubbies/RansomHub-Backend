@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'admins',
     'marketplace',
     'payments',
+    'chat',
 ]
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
