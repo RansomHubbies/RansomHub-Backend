@@ -99,10 +99,9 @@ def signup_view(request):
 def verify_otp(request):
     email = request.data.get("email")
     otp = request.data.get("otp")
-    print(f"Received email: {email}, OTP: {otp}")  # Debug print
-    print(email)
     user = CustomUser.objects.filter(email=email).first()
-    print(user)
+    if(user.is_verified == True):
+        return Response({"error": "User already verified"}, status=400)
     if not user:
         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
