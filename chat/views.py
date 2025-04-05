@@ -261,9 +261,9 @@ def add_group_members(request):
         if isinstance(members_usernames, list):
 
 
-            # total number of members in the group should not exceed 20
+            # total number of members in the group should not exceed 10
             group = Group.objects.get(username=group_username)
-            if group.members.count() + len(members_usernames) > 20:
+            if group.members.count() + len(members_usernames) > 10:
                 return Response({"error": "Group members should not exceed 20."}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -347,6 +347,38 @@ def get_user_public_key(requests):
     
     except CustomUser.DoesNotExist:
         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def get_group_members(requests):
+    try:
+        group_username = requests.query_params.get("group_username")
+        user = requests.query_params.get("user")
+        if not user:
+            return Response({"error": "User is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not group_username:
+            return Response({"error": "Group username is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        group = Group.objects.get(username=group_username)
+
+        if not group:
+            return Response({"error": "Group not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        members = group.members.all()
+
+        if user not in members:
+            return Response({"error": "User is not a member of the group"}, status=status.HTTP_403_FORBIDDEN)
+
+        member_list = [member.username for member in members]
+
+        return Response({"members": member_list}, status=status.HTTP_200_OK)
+    
+    except Group.DoesNotExist:
+        return Response({"error": "Group not found"}, status=status.HTTP_404_NOT_FOUND)
     
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
