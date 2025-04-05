@@ -38,6 +38,11 @@ def signup_view(request):
     password = request.data.get("password")
     phone = request.data.get("phone")
     public_key = request.data.get("public_key")
+    encrypted_private_key = request.data.get("encrypted_private_key")
+    private_key_salt = request.data.get("private_key_salt")
+
+    if not public_key or not encrypted_private_key or not private_key_salt:
+        return Response({"error": "All fields (public_key, encrypted_private_key, private_key_salt) are required."}, status=status.HTTP_400_BAD_REQUEST)
 
     if not username or not email or not password or not name:
         return Response({"error": "All fields (username, email, password) are required."}, status=status.HTTP_400_BAD_REQUEST)
@@ -48,7 +53,15 @@ def signup_view(request):
         return Response({"error": "Username not available"}, status=status.HTTP_409_CONFLICT)
 
     print(name,username,password, email,phone)
-    user = CustomUser.objects.create_user(username=username, first_name=name, email=email, password=password, public_key=public_key)
+    user = CustomUser.objects.create_user(
+        username=username, 
+        first_name=name, 
+        email=email, 
+        password=password, 
+        public_key=public_key,
+        encrypted_private_key=encrypted_private_key,
+        private_key_salt=private_key_salt,
+    )
     create_activity_log(
         user=user, 
         action_type='USER_REGISTRATION', 
@@ -132,12 +145,16 @@ def login(request):
         # Generate JWT token for the user
         refresh = RefreshToken.for_user(user)
         access_token = refresh.access_token
+        encrypted_private_key = user.encrypted_private_key
+        private_key_salt = user.private_key_salt
         return Response({
             "message": "Login successful",
             "access_token": str(access_token),  # Send access token as response
             "refresh_token": str(refresh),  # Optional: Send refresh token as well
             "email": user.email,
-            "username": user.username
+            "username": user.username,
+            "encrypted_private_key": encrypted_private_key,
+            "private_key_salt": private_key_salt,
         }, status=200)
     else:
         return Response({"error": "Invalid email or password"}, status=401)

@@ -19,6 +19,7 @@ def send_message(request):
         sender_username = request.data.get('sender')
         recipient_username = request.data.get('recipient')
         message_text = request.data.get('message')
+        message_iv = request.data.get('iv')
         timestamp = timezone.now()
 
         if len(message_text) > 256:
@@ -31,6 +32,8 @@ def send_message(request):
         if not sender or not recipient:
             return Response({"error": "Invalid sender or recipient"}, status=status.HTTP_400_BAD_REQUEST)
 
+        print("sent mesaage: ", message_text)
+
         # Send the message
         pusher_client.trigger(
             f'{recipient_username}',
@@ -38,19 +41,21 @@ def send_message(request):
             {
                 'sender': sender_username,
                 'message': message_text,
+                'iv': message_iv,
                 'timestamp': timestamp.isoformat()
             },
         )
 
         # Save the message
-        message_object = Message.objects.create(sender=sender, recipient=recipient, message=message_text)
+        message_object = Message.objects.create(sender=sender, recipient=recipient, message=message_text, iv=message_iv)
         Message.save(message_object)
 
         messages = Message.objects.filter(sender=sender, recipient=recipient) | Message.objects.filter(sender=recipient, recipient=sender)
         messages = messages.order_by('-timestamp')
 
         if messages.count() > 20:
-            messages[20:].delete()
+            message_ids_to_delete = messages.values_list('id', flat=True)[20:]
+            Message.objects.filter(id__in=message_ids_to_delete).delete()
         
         return Response({"message": "Message sent"}, status=status.HTTP_200_OK)
     
@@ -152,6 +157,7 @@ def get_messages(request):
                 "sender": message.sender.username,
                 "recipient": message.recipient.username,
                 "message": message.message,
+                "iv": message.iv,
                 "timestamp": message.timestamp
             })
 
