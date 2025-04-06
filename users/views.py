@@ -433,12 +433,13 @@ def verify_identity(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_users(request):
-    users = CustomUser.objects.all()
+
+    users = CustomUser.objects.filter(is_verified=True).exclude(is_superuser=True).exclude(is_suspended=True)
+    if not users.exists():
+        return Response({"message": "No users found"}, status=status.HTTP_404_NOT_FOUND)
+
     user_list = []
     for user in users:
-        if user.is_superuser:
-            continue
-
         user_list.append({
             "name": user.first_name,
             "email": user.email,

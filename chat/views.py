@@ -1,10 +1,10 @@
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import status
 from users.models import CustomUser
 from .messenger import pusher_client
-from .models import Message, Group, GroupMessage
+from .models import Message, Group, GroupMessage, FileMessage, GroupFileMessage
 import hashlib
 from django.utils import timezone
 
@@ -31,6 +31,12 @@ def send_message(request):
 
         if not sender or not recipient:
             return Response({"error": "Invalid sender or recipient"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not sender.is_verified or not recipient.is_verified:
+            return Response({"error": "Sender or recipient is not verified"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if sender.is_suspended or recipient.is_suspended:
+            return Response({"error": "Sender or recipient is suspended"}, status=status.HTTP_400_BAD_REQUEST)
 
         print("sent mesaage: ", message_text)
 
@@ -65,7 +71,67 @@ def send_message(request):
     except Exception as e:
         print(e)
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def send_file(request):
+    try:
+
+        print(request.data)
+
+        sender_username = request.data.get('sender')
+        recipient_username = request.data.get('recipient')
+        file = request.data.get("file")
+        file_name = request.data.get("file_name")
+        file_type = request.data.get("file_type")
+        iv = request.data.get("iv")
+        timestamp = timezone.now()
+
+        if len(file) > 1024*1000:
+            return Response({"error": "File too large"}, status=status.HTTP_400_BAD_REQUEST)
+
+        sender = CustomUser.objects.get(username=sender_username)
+        recipient = CustomUser.objects.get(username=recipient_username)
+        if not sender or not recipient:
+            return Response({"error": "Invalid sender or recipient"}, status=status.HTTP_400_BAD_REQUEST)
+        if not sender.is_verified or not recipient.is_verified:
+            return Response({"error": "Sender or recipient is not verified"}, status=status.HTTP_400_BAD_REQUEST)
+        if sender.is_suspended or recipient.is_suspended:
+            return Response({"error": "Sender or recipient is suspended"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        chunk_size = 1024*9
+        chunks = [file[i:i + chunk_size] for i in range(0, len(file), chunk_size)]
+
+        for i, chunk in enumerate(chunks):
+            pusher_client.trigger(
+                f'{recipient_username}',
+                f'{sender_username}',
+                {
+                    'sender': sender_username,
+                    'file_chuck': chunk,
+                    'file_name': file_name,
+                    'file_type': file_type,
+                    'chunk_index': i+1,
+                    'total_chunks': len(chunks)
+                },
+            )
+
+        file_message = FileMessage.objects.create(sender=sender, recipient=recipient, file=file, iv=iv, filename=file_name, file_type=file_type)
+        FileMessage.save(file_message)
+
+        files = FileMessage.objects.filter(sender=sender, recipient=recipient) | FileMessage.objects.filter(sender=recipient, recipient=sender)
+        files = files.order_by('-timestamp')
+
+        if files.count() > 5:
+            file_ids_to_delete = files.values_list('id', flat=True)[5:]
+            FileMessage.objects.filter(id__in=file_ids_to_delete).delete()
+
+        return Response({"message": "File sent"}, status=status.HTTP_200_OK)
     
+    except Exception as e:
+        print(e)
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -86,6 +152,9 @@ def send_group_message(request):
         # verify that the sender and group exist
         sender = CustomUser.objects.get(username=sender_username)
         group = Group.objects.get(username=group_username)
+
+        if sender.is_suspended:
+            return Response({"error": "Sender is suspended"}, status=status.HTTP_400_BAD_REQUEST)
 
         if not sender or not group:
             return Response({"error": "Invalid sender or group"}, status=status.HTTP_400_BAD_REQUEST)
@@ -117,7 +186,8 @@ def send_group_message(request):
         messages = messages.order_by('-timestamp')
 
         if messages.count() > 20:
-            messages[20:].delete()
+            message_ids_to_delete = messages.values_list('id', flat=True)[20:]
+            GroupMessage.objects.filter(id__in=message_ids_to_delete).delete()
         
         return Response({"message": "Message sent"}, status=status.HTTP_200_OK)
     
@@ -126,7 +196,80 @@ def send_group_message(request):
     
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def send_group_file(request):
+
+    try:
+
+        print(request.data)
+        sender_username = request.data.get('sender')
+        print(sender_username)
+        group_username = request.data.get('group')
+        file = request.data.get("file")
+        file_name = request.data.get("file_name")
+        file_type = request.data.get("file_type")
+        iv = request.data.get("iv")
+        timestamp = timezone.now()
+
+        if len(file) > 1024*1000:
+            return Response({"error": "File too large"}, status=status.HTTP_400_BAD_REQUEST)
+
+        print(sender_username)
+        sender = CustomUser.objects.get(username=sender_username)
+        group = Group.objects.get(username=group_username)
+
+        if not sender or not group:
+            return Response({"error": "Invalid sender or group"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if sender.is_suspended:
+            return Response({"error": "Sender is suspended"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # get the group members
+        members = group.members.all()
+
+        chunk_size = 1024*9
+        chunks = [file[i:i + chunk_size] for i in range(0, len(file), chunk_size)]
+
+        for member in members:
+
+            if member.username == sender_username:
+                continue
+
+            for i, chunk in enumerate(chunks):
+                pusher_client.trigger(
+                    f'{member.username}',
+                    f'{group_username}',
+                    {
+                        'sender': sender_username,
+                        'file_chunk': chunk,
+                        'file_name': file_name,
+                        'file_type': file_type,
+                        'chunk_index': i+1,
+                        'total_chunks': len(chunks)
+                    },
+                )
+
+        # Save the message
+        message = GroupFileMessage.objects.create(sender=sender, group=group, file=file, iv=iv, filename=file_name, file_type=file_type)
+        GroupFileMessage.save(message)
+
+        messages = GroupFileMessage.objects.filter(group=group)
+        messages = messages.order_by('-timestamp')
+
+        if messages.count() > 5:
+            message_ids_to_delete = messages.values_list('id', flat=True)[5:]
+            GroupFileMessage.objects.filter(id__in=message_ids_to_delete).delete()
+        
+        return Response({"message": "File sent"}, status=status.HTTP_200_OK)
     
+    except CustomUser.DoesNotExist:
+        return Response({"error": "Invalid sender or group"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    except Exception as e:
+        # print(e)
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -151,16 +294,35 @@ def get_messages(request):
         messages = Message.objects.filter(sender=sender, recipient=recipient) | Message.objects.filter(sender=recipient, recipient=sender)
         message_list = []
 
+        files = FileMessage.objects.filter(sender=sender, recipient=recipient) | FileMessage.objects.filter(sender=recipient, recipient=sender)
+
         messages = messages.order_by('-timestamp')[:20]
+        files = files.order_by('-timestamp')[:5]
 
         for message in messages:
             message_list.append({
                 "sender": message.sender.username,
                 "recipient": message.recipient.username,
+                "type": "text",
                 "message": message.message,
                 "iv": message.iv,
                 "timestamp": message.timestamp
             })
+
+        for file in files:
+            message_list.append({
+                "sender": file.sender.username,
+                "recipient": file.recipient.username,
+                "type": "file",
+                "file": file.file,
+                "filename": file.filename,
+                "file_type": file.file_type,
+                "iv": file.iv,
+                "timestamp": file.timestamp
+            })
+
+        # Sort the messages by timestamp
+        message_list.sort(key=lambda x: x['timestamp'], reverse=True)
 
         return Response(message_list, status=status.HTTP_200_OK)
     
@@ -191,11 +353,15 @@ def get_group_messages(request):
         messages = GroupMessage.objects.filter(group=group)
         message_list = []
 
+        # Get the files
+        files = GroupFileMessage.objects.filter(group=group)
+
         # Check if the user is a member of the group
         if request.user not in group.members.all():
             return Response({"error": "User not authorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
         messages = messages.order_by('-timestamp')[:20]
+        files = files.order_by('-timestamp')[:5]
 
         for message in messages:
             message_list.append({
@@ -205,6 +371,19 @@ def get_group_messages(request):
                 "timestamp": message.timestamp
             })
 
+        for file in files:
+            message_list.append({
+                "sender": file.sender.username,
+                "group": file.group.username,
+                "file": file.file,
+                "filename": file.filename,
+                "file_type": file.file_type,
+                "timestamp": file.timestamp
+            })
+
+        # Sort the messages by timestamp
+        message_list.sort(key=lambda x: x['timestamp'], reverse=True)
+
         return Response(message_list, status=status.HTTP_200_OK)
     
     except Group.DoesNotExist:
@@ -212,6 +391,7 @@ def get_group_messages(request):
     
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
     
 @api_view(['POST'])

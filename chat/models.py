@@ -31,3 +31,28 @@ class GroupMessage(models.Model):
 
     def __str__(self):
         return f"{self.sender}: {self.message}"
+    
+class FileMessage(models.Model):
+    sender = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="file_sender")
+    recipient = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="file_recipient")
+    file = models.TextField()
+    filename = models.CharField(max_length=255, default="tmp.txt")
+    file_type = models.CharField(max_length=255, default="text")
+    iv = models.CharField(max_length=256, null=False, blank=False)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.sender}: {self.file.name}"
+    
+
+class GroupFileMessage(models.Model):
+    group = models.ForeignKey(Group, on_delete=models.CASCADE)
+    sender = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    file = models.TextField()
+    filename = models.CharField(max_length=255, default="tmp.txt")
+    file_type = models.CharField(max_length=255, default="text")
+    iv = models.CharField(max_length=256, null=False, blank=False)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.sender}: {self.file.name}"
