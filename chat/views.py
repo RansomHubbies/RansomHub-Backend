@@ -9,7 +9,7 @@ import hashlib
 from django.utils import timezone
 
 @api_view(['POST'])
-@permission_classes([AllowAny]) # Change to IsAuthenticated after testing or when the frontend is ready
+@permission_classes([IsAuthenticated]) # Change to IsAuthenticated after testing or when the frontend is ready
 def send_message(request):
     """
     Send a message to a user
@@ -68,7 +68,7 @@ def send_message(request):
     
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def send_group_message(request):
     """
     Send a message to a group
@@ -129,24 +129,25 @@ def send_group_message(request):
     
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def get_messages(request):
     """
     Get messages between two users
     """
     try:
-        # Get the sender and recipient
         sender_username = request.query_params.get('sender')
         recipient_username = request.query_params.get('recipient')
 
-        # verify that the sender and recipient exist
+        if request.user.username != sender_username:
+            print(request.user.username, sender_username)
+            return Response({"error": "User not authorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
         sender = CustomUser.objects.get(username=sender_username)
         recipient = CustomUser.objects.get(username=recipient_username)
 
         if not sender or not recipient:
             return Response({"error": "Invalid sender or recipient"}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Get the messages
         messages = Message.objects.filter(sender=sender, recipient=recipient) | Message.objects.filter(sender=recipient, recipient=sender)
         message_list = []
 
@@ -171,7 +172,7 @@ def get_messages(request):
     
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def get_group_messages(request):
     """
     Get messages in a group
@@ -189,6 +190,10 @@ def get_group_messages(request):
         # Get the messages
         messages = GroupMessage.objects.filter(group=group)
         message_list = []
+
+        # Check if the user is a member of the group
+        if request.user not in group.members.all():
+            return Response({"error": "User not authorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
         messages = messages.order_by('-timestamp')[:20]
 
@@ -210,7 +215,7 @@ def get_group_messages(request):
 
     
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def create_group(request):
     """
     Create a group
@@ -251,7 +256,7 @@ def create_group(request):
     
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def add_group_members(request):
 
     try:
@@ -296,7 +301,7 @@ def add_group_members(request):
     
 
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def get_groups(requests):
 
     user = requests.query_params.get("user")
@@ -315,7 +320,7 @@ def get_groups(requests):
 
 
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def get_all_groups(requests):
     groups = Group.objects.all()
     group_list = []
@@ -330,7 +335,7 @@ def get_all_groups(requests):
     return Response(group_list, status=status.HTTP_200_OK)
 
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def get_user_public_key(requests):
     try:
         username = requests.query_params.get("username")
@@ -352,7 +357,7 @@ def get_user_public_key(requests):
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def get_group_members(requests):
     try:
         group_username = requests.query_params.get("group_username")
