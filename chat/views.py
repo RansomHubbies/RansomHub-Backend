@@ -9,7 +9,7 @@ import hashlib
 from django.utils import timezone
 
 @api_view(['POST'])
-@permission_classes([AllowAny]) # Change to IsAuthenticated after testing or when the frontend is ready
+@permission_classes([IsAuthenticated]) # Change to IsAuthenticated after testing or when the frontend is ready
 def send_message(request):
     """
     Send a message to a user
@@ -38,7 +38,7 @@ def send_message(request):
         if sender.is_suspended or recipient.is_suspended:
             return Response({"error": "Sender or recipient is suspended"}, status=status.HTTP_400_BAD_REQUEST)
 
-        print("sent mesaage: ", message_text)
+        # print("sent mesaage: ", message_text)
 
         # Send the message
         pusher_client.trigger(
@@ -70,15 +70,15 @@ def send_message(request):
         return Response({"error": "Invalid sender or recipient"}, status=status.HTTP_400_BAD_REQUEST)
 
     except Exception as e:
-        print(e)
+        # print(e)
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def send_file(request):
     try:
 
-        print(request.data)
+        # print(request.data)
 
         sender_username = request.data.get('sender')
         recipient_username = request.data.get('recipient')
@@ -99,7 +99,6 @@ def send_file(request):
             return Response({"error": "Sender or recipient is not verified"}, status=status.HTTP_400_BAD_REQUEST)
         if sender.is_suspended or recipient.is_suspended:
             return Response({"error": "Sender or recipient is suspended"}, status=status.HTTP_400_BAD_REQUEST)
-        
 
         pusher_client.trigger(
             f'{recipient_username}',
@@ -109,9 +108,6 @@ def send_file(request):
                 'type': 'file',
                 'message': 'FILE_SENT_TO_CHAT',
                 'iv': iv,
-                'file': file,
-                'filename': file_name,
-                'file_type': file_type,
                 'timestamp': timestamp.isoformat()
             },
         )
@@ -130,12 +126,12 @@ def send_file(request):
         return Response({"message": "File sent"}, status=status.HTTP_200_OK)
     
     except Exception as e:
-        print(e)
+        # print(e)
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def send_group_message(request):
     """
     Send a message to a group
@@ -200,14 +196,14 @@ def send_group_message(request):
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def send_group_file(request):
 
     try:
 
-        print(request.data)
+        # print(request.data)
         sender_username = request.data.get('sender')
-        print(sender_username)
+        # print(sender_username)
         group_username = request.data.get('group')
         file = request.data.get("file")
         file_name = request.data.get("file_name")
@@ -218,7 +214,7 @@ def send_group_file(request):
         if len(file) > 1024*1000:
             return Response({"error": "File too large"}, status=status.HTTP_400_BAD_REQUEST)
 
-        print(sender_username)
+        # print(sender_username)
         sender = CustomUser.objects.get(username=sender_username)
         group = Group.objects.get(username=group_username)
 
@@ -232,6 +228,7 @@ def send_group_file(request):
         members = group.members.all()
 
         for member in members:
+
             if member.username == sender_username:
                 continue
 
@@ -243,9 +240,6 @@ def send_group_file(request):
                     'type': 'file',
                     'message': 'FILE_SENT_TO_CHAT',
                     'iv': iv,
-                    'file': file,
-                    'filename': file_name,
-                    'file_type': file_type,
                     'timestamp': timestamp.isoformat()
                 },
             )
@@ -271,7 +265,7 @@ def send_group_file(request):
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def get_messages(request):
     """
     Get messages between two users
@@ -280,9 +274,9 @@ def get_messages(request):
         sender_username = request.query_params.get('sender')
         recipient_username = request.query_params.get('recipient')
 
-        # if request.user.username != sender_username:
-        #     print(request.user.username, sender_username)
-        #     return Response({"error": "User not authorized"}, status=status.HTTP_401_UNAUTHORIZED)
+        if request.user.username != sender_username:
+            # print(request.user.username, sender_username)
+            return Response({"error": "User not authorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
         sender = CustomUser.objects.get(username=sender_username)
         recipient = CustomUser.objects.get(username=recipient_username)
@@ -333,7 +327,7 @@ def get_messages(request):
     
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def get_group_messages(request):
     """
     Get messages in a group
@@ -356,8 +350,8 @@ def get_group_messages(request):
         files = GroupFileMessage.objects.filter(group=group)
 
         # Check if the user is a member of the group
-        # if request.user not in group.members.all():
-        #     return Response({"error": "User not authorized"}, status=status.HTTP_401_UNAUTHORIZED)
+        if request.user not in group.members.all():
+            return Response({"error": "User not authorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
         messages = messages.order_by('-timestamp')[:20]
         files = files.order_by('-timestamp')[:5]
@@ -396,7 +390,7 @@ def get_group_messages(request):
 
     
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def create_group(request):
     """
     Create a group
@@ -432,12 +426,12 @@ def create_group(request):
         return Response({"error": "Invalid member"}, status=status.HTTP_400_BAD_REQUEST)
     
     except Exception as e:
-        print(e)
+        # print(e)
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def add_group_members(request):
 
     try:
@@ -482,7 +476,7 @@ def add_group_members(request):
     
 
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def get_groups(requests):
 
     user = requests.query_params.get("user")
@@ -501,7 +495,7 @@ def get_groups(requests):
 
 
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def get_all_groups(requests):
     groups = Group.objects.all()
     group_list = []
@@ -516,7 +510,7 @@ def get_all_groups(requests):
     return Response(group_list, status=status.HTTP_200_OK)
 
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def get_user_public_key(requests):
     try:
         username = requests.query_params.get("username")
@@ -538,7 +532,7 @@ def get_user_public_key(requests):
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def get_group_members(requests):
     try:
         group_username = requests.query_params.get("group_username")
