@@ -357,8 +357,8 @@ def get_group_messages(request):
         files = GroupFileMessage.objects.filter(group=group)
 
         # Check if the user is a member of the group
-        if request.user not in group.members.all():
-            return Response({"error": "User not authorized"}, status=status.HTTP_401_UNAUTHORIZED)
+        # if request.user not in group.members.all():
+        #     return Response({"error": "User not authorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
         messages = messages.order_by('-timestamp')[:20]
         files = files.order_by('-timestamp')[:5]
