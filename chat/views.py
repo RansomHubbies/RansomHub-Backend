@@ -398,6 +398,7 @@ def get_group_messages(request):
         for message in messages:
             message_list.append({
                 "sender": message.sender.username,
+                "type": "text",
                 "group": message.group.username,
                 "message": message.message,
                 "timestamp": message.timestamp
@@ -406,6 +407,7 @@ def get_group_messages(request):
         for file in files:
             message_list.append({
                 "sender": file.sender.username,
+                "type": "file",
                 "group": file.group.username,
                 "file": file.file,
                 "filename": file.filename,
