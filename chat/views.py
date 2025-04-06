@@ -46,6 +46,7 @@ def send_message(request):
             f'{sender_username}',
             {
                 'sender': sender_username,
+                'type': 'text',
                 'message': message_text,
                 'iv': message_iv,
                 'timestamp': timestamp.isoformat()
@@ -99,22 +100,35 @@ def send_file(request):
         if sender.is_suspended or recipient.is_suspended:
             return Response({"error": "Sender or recipient is suspended"}, status=status.HTTP_400_BAD_REQUEST)
         
-        chunk_size = 1024*9
-        chunks = [file[i:i + chunk_size] for i in range(0, len(file), chunk_size)]
+        # chunk_size = 1024*9
+        # chunks = [file[i:i + chunk_size] for i in range(0, len(file), chunk_size)]
 
-        for i, chunk in enumerate(chunks):
-            pusher_client.trigger(
-                f'{recipient_username}',
-                f'{sender_username}',
-                {
-                    'sender': sender_username,
-                    'file_chuck': chunk,
-                    'file_name': file_name,
-                    'file_type': file_type,
-                    'chunk_index': i+1,
-                    'total_chunks': len(chunks)
-                },
-            )
+        # for i, chunk in enumerate(chunks):
+        #     pusher_client.trigger(
+        #         f'{recipient_username}',
+        #         f'{sender_username}',
+        #         {
+        #             'sender': sender_username,
+        #             'file_chuck': chunk,
+        #             'file_name': file_name,
+        #             'file_type': file_type,
+        #             'chunk_index': i+1,
+        #             'total_chunks': len(chunks)
+        #         },
+        #     )
+
+        pusher_client.trigger(
+            f'{recipient_username}',
+            f'{sender_username}',
+            {
+                'sender': sender_username,
+                'type': 'file',
+                'message': 'FILE_SENT_TO_CHAT',
+                'iv': iv,
+                'timestamp': timestamp.isoformat()
+            },
+        )
+
 
         file_message = FileMessage.objects.create(sender=sender, recipient=recipient, file=file, iv=iv, filename=file_name, file_type=file_type)
         FileMessage.save(file_message)
@@ -173,6 +187,7 @@ def send_group_message(request):
                 f'{group_username}',
                 {
                     'sender': sender_username,
+                    'type': 'text',
                     'message': message,
                     'timestamp': timestamp.isoformat()
                 },
@@ -229,27 +244,44 @@ def send_group_file(request):
         # get the group members
         members = group.members.all()
 
-        chunk_size = 1024*9
-        chunks = [file[i:i + chunk_size] for i in range(0, len(file), chunk_size)]
+        # chunk_size = 1024*9
+        # chunks = [file[i:i + chunk_size] for i in range(0, len(file), chunk_size)]
+
+        # for member in members:
+
+        #     if member.username == sender_username:
+        #         continue
+
+        #     for i, chunk in enumerate(chunks):
+        #         pusher_client.trigger(
+        #             f'{member.username}',
+        #             f'{group_username}',
+        #             {
+        #                 'sender': sender_username,
+        #                 'file_chunk': chunk,
+        #                 'file_name': file_name,
+        #                 'file_type': file_type,
+        #                 'chunk_index': i+1,
+        #                 'total_chunks': len(chunks)
+        #             },
+        #         )
 
         for member in members:
 
             if member.username == sender_username:
                 continue
 
-            for i, chunk in enumerate(chunks):
-                pusher_client.trigger(
-                    f'{member.username}',
-                    f'{group_username}',
-                    {
-                        'sender': sender_username,
-                        'file_chunk': chunk,
-                        'file_name': file_name,
-                        'file_type': file_type,
-                        'chunk_index': i+1,
-                        'total_chunks': len(chunks)
-                    },
-                )
+            pusher_client.trigger(
+                f'{member.username}',
+                f'{group_username}',
+                {
+                    'sender': sender_username,
+                    'type': 'file',
+                    'message': 'FILE_SENT_TO_CHAT',
+                    'iv': iv,
+                    'timestamp': timestamp.isoformat()
+                },
+            )
 
         # Save the message
         message = GroupFileMessage.objects.create(sender=sender, group=group, file=file, iv=iv, filename=file_name, file_type=file_type)
