@@ -9,7 +9,7 @@ import hashlib
 from django.utils import timezone
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated]) # Change to IsAuthenticated after testing or when the frontend is ready
+@permission_classes([AllowAny]) # Change to IsAuthenticated after testing or when the frontend is ready
 def send_message(request):
     """
     Send a message to a user
@@ -73,7 +73,7 @@ def send_message(request):
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def send_file(request):
     try:
 
@@ -134,7 +134,7 @@ def send_file(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def send_group_message(request):
     """
     Send a message to a group
@@ -198,7 +198,7 @@ def send_group_message(request):
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def send_group_file(request):
 
     try:
@@ -272,7 +272,7 @@ def send_group_file(request):
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def get_messages(request):
     """
     Get messages between two users
@@ -281,9 +281,9 @@ def get_messages(request):
         sender_username = request.query_params.get('sender')
         recipient_username = request.query_params.get('recipient')
 
-        if request.user.username != sender_username:
-            print(request.user.username, sender_username)
-            return Response({"error": "User not authorized"}, status=status.HTTP_401_UNAUTHORIZED)
+        # if request.user.username != sender_username:
+        #     print(request.user.username, sender_username)
+        #     return Response({"error": "User not authorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
         sender = CustomUser.objects.get(username=sender_username)
         recipient = CustomUser.objects.get(username=recipient_username)
@@ -334,7 +334,7 @@ def get_messages(request):
     
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def get_group_messages(request):
     """
     Get messages in a group
@@ -395,7 +395,7 @@ def get_group_messages(request):
 
     
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def create_group(request):
     """
     Create a group
@@ -436,7 +436,7 @@ def create_group(request):
     
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def add_group_members(request):
 
     try:
@@ -481,7 +481,7 @@ def add_group_members(request):
     
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def get_groups(requests):
 
     user = requests.query_params.get("user")
@@ -500,7 +500,7 @@ def get_groups(requests):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def get_all_groups(requests):
     groups = Group.objects.all()
     group_list = []
@@ -515,7 +515,7 @@ def get_all_groups(requests):
     return Response(group_list, status=status.HTTP_200_OK)
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def get_user_public_key(requests):
     try:
         username = requests.query_params.get("username")
@@ -537,7 +537,7 @@ def get_user_public_key(requests):
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def get_group_members(requests):
     try:
         group_username = requests.query_params.get("group_username")

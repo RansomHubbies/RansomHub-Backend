@@ -431,7 +431,7 @@ def verify_identity(request):
     }, status=201)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
 def get_users(request):
 
     users = CustomUser.objects.filter(is_verified=True).exclude(is_superuser=True).exclude(is_suspended=True)
