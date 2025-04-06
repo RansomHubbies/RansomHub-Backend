@@ -100,22 +100,6 @@ def send_file(request):
         if sender.is_suspended or recipient.is_suspended:
             return Response({"error": "Sender or recipient is suspended"}, status=status.HTTP_400_BAD_REQUEST)
         
-        # chunk_size = 1024*9
-        # chunks = [file[i:i + chunk_size] for i in range(0, len(file), chunk_size)]
-
-        # for i, chunk in enumerate(chunks):
-        #     pusher_client.trigger(
-        #         f'{recipient_username}',
-        #         f'{sender_username}',
-        #         {
-        #             'sender': sender_username,
-        #             'file_chuck': chunk,
-        #             'file_name': file_name,
-        #             'file_type': file_type,
-        #             'chunk_index': i+1,
-        #             'total_chunks': len(chunks)
-        #         },
-        #     )
 
         pusher_client.trigger(
             f'{recipient_username}',
@@ -125,6 +109,9 @@ def send_file(request):
                 'type': 'file',
                 'message': 'FILE_SENT_TO_CHAT',
                 'iv': iv,
+                'file': file,
+                'filename': file_name,
+                'file_type': file_type,
                 'timestamp': timestamp.isoformat()
             },
         )
@@ -244,30 +231,7 @@ def send_group_file(request):
         # get the group members
         members = group.members.all()
 
-        # chunk_size = 1024*9
-        # chunks = [file[i:i + chunk_size] for i in range(0, len(file), chunk_size)]
-
-        # for member in members:
-
-        #     if member.username == sender_username:
-        #         continue
-
-        #     for i, chunk in enumerate(chunks):
-        #         pusher_client.trigger(
-        #             f'{member.username}',
-        #             f'{group_username}',
-        #             {
-        #                 'sender': sender_username,
-        #                 'file_chunk': chunk,
-        #                 'file_name': file_name,
-        #                 'file_type': file_type,
-        #                 'chunk_index': i+1,
-        #                 'total_chunks': len(chunks)
-        #             },
-        #         )
-
         for member in members:
-
             if member.username == sender_username:
                 continue
 
@@ -279,6 +243,9 @@ def send_group_file(request):
                     'type': 'file',
                     'message': 'FILE_SENT_TO_CHAT',
                     'iv': iv,
+                    'file': file,
+                    'filename': file_name,
+                    'file_type': file_type,
                     'timestamp': timestamp.isoformat()
                 },
             )
