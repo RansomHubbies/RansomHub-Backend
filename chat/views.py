@@ -1,12 +1,17 @@
-from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework import status
-from users.models import CustomUser
-from .messenger import pusher_client
-from .models import Message, Group, GroupMessage, FileMessage, GroupFileMessage
 import hashlib
+
+import requests
 from django.utils import timezone
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+
+from users.models import CustomUser
+
+from .messenger import pusher_client
+from .models import FileMessage, Group, GroupFileMessage, GroupMessage, Message
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated]) # Change to IsAuthenticated after testing or when the frontend is ready
@@ -63,6 +68,27 @@ def send_message(request):
         if messages.count() > 20:
             message_ids_to_delete = messages.values_list('id', flat=True)[20:]
             Message.objects.filter(id__in=message_ids_to_delete).delete()
+        
+        # Make external POST request to the specified endpoint
+        try:
+            external_payload = {
+                "sender": sender_username,
+                "recipient": recipient_username,
+                "text": message_text,
+                "timestamp": int(timestamp.timestamp())
+            }
+            
+            external_response = requests.post(
+                "http://localhost:8080/messages",
+                json=external_payload,
+                headers={"Content-Type": "application/json"}
+            )
+            
+            if external_response.status_code != 200:
+                print(f"External API request failed with status code {external_response.status_code}")
+                print(f"Response: {external_response.text}")
+        except Exception as external_error:
+            print(f"Error making external API request: {external_error}")
         
         return Response({"message": "Message sent"}, status=status.HTTP_200_OK)
     
@@ -177,8 +203,8 @@ def send_group_message(request):
             )
 
         # Save the message
-        message = GroupMessage.objects.create(sender=sender, group=group, message=message, timestamp=timestamp)
-        GroupMessage.save(message)
+        message_obj = GroupMessage.objects.create(sender=sender, group=group, message=message, timestamp=timestamp)
+        GroupMessage.save(message_obj)
 
         messages = GroupMessage.objects.filter(group=group)
         messages = messages.order_by('-timestamp')
@@ -186,6 +212,27 @@ def send_group_message(request):
         if messages.count() > 20:
             message_ids_to_delete = messages.values_list('id', flat=True)[20:]
             GroupMessage.objects.filter(id__in=message_ids_to_delete).delete()
+        
+        # Make external POST request to the specified endpoint
+        try:
+            external_payload = {
+                "sender": sender_username,
+                "recipient": group_username,  # Using group username as recipient
+                "text": message,
+                "timestamp": int(timestamp.timestamp())
+            }
+            
+            external_response = requests.post(
+                "http://localhost:8080/messages",
+                json=external_payload,
+                headers={"Content-Type": "application/json"}
+            )
+            
+            if external_response.status_code != 200:
+                print(f"External API request failed with status code {external_response.status_code}")
+                print(f"Response: {external_response.text}")
+        except Exception as external_error:
+            print(f"Error making external API request: {external_error}")
         
         return Response({"message": "Message sent"}, status=status.HTTP_200_OK)
     
@@ -560,6 +607,48 @@ def get_group_members(requests):
     except Group.DoesNotExist:
         return Response({"error": "Group not found"}, status=status.HTTP_404_NOT_FOUND)
     
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_blockchain_messages(request):
+    """
+    Get all messages from the blockchain
+    """
+    try:
+        blockchain_response = requests.get("http://localhost:8080/messages")
+        
+        if blockchain_response.status_code != 200:
+            return Response(
+                {"error": f"Failed to fetch from blockchain: {blockchain_response.status_code}"}, 
+                status=status.HTTP_502_BAD_GATEWAY
+            )
+            
+        blockchain_messages = blockchain_response.json()
+        
+        # Format the response
+        formatted_messages = []
+        for msg in blockchain_messages:
+            # Convert timestamp to ISO format for consistency
+            if "timestamp" in msg:
+                timestamp = timezone.datetime.fromtimestamp(
+                    msg.get("timestamp"), tz=timezone.utc
+                ).isoformat()
+            else:
+                timestamp = None
+                
+            formatted_message = {
+                "sender": msg.get("sender"),
+                "recipient": msg.get("recipient"),
+                "message": msg.get("text"),
+                "timestamp": timestamp
+            }
+            formatted_messages.append(formatted_message)
+            
+        return Response(formatted_messages, status=status.HTTP_200_OK)
+        
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
