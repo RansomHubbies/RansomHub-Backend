@@ -331,6 +331,10 @@ def get_messages(request):
         if not sender or not recipient:
             return Response({"error": "Invalid sender or recipient"}, status=status.HTTP_400_BAD_REQUEST)
         
+        is_following = recipient in sender.following.all()
+        follow_request_sent = sender in recipient.follow_requests.all()
+        is_blocked = recipient in sender.blocked_users.all()
+
         messages = Message.objects.filter(sender=sender, recipient=recipient) | Message.objects.filter(sender=recipient, recipient=sender)
         message_list = []
 
@@ -363,8 +367,12 @@ def get_messages(request):
 
         # Sort the messages by timestamp
         message_list.sort(key=lambda x: x['timestamp'], reverse=True)
-
-        return Response(message_list, status=status.HTTP_200_OK)
+        relationship= {
+                "is_following": is_following,
+                "follow_request_sent": follow_request_sent,
+                "is_blocked": is_blocked
+            }
+        return Response({"messages": message_list, "relationship": relationship}, status=status.HTTP_200_OK)
     
     except CustomUser.DoesNotExist:
         return Response({"error": "Invalid sender or recipient"}, status=status.HTTP_400_BAD_REQUEST)

@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import signup_view, verify_otp, resendotp, login,logout_view, profile_view, refresh_token,reset_password, reset_password_confirm,send_reset_otp,upload_image, update_username, verify_identity,verify_captcha, get_users,set_csrf_cookie
+from .views import signup_view, verify_otp, resendotp, login,logout_view, profile_view, refresh_token,reset_password, reset_password_confirm,send_reset_otp,upload_image, update_username, verify_identity,verify_captcha, get_users,set_csrf_cookie, followUser, reportUser, blockUser, unblockUser, acceptFollowRequest, rejectFollowRequest
 
 urlpatterns = [
     path('signup/', signup_view, name="signup"),
@@ -18,4 +18,10 @@ urlpatterns = [
     path('verify-captcha/', verify_captcha, name='verify_captcha'),
     path('get_users/', get_users, name='get_users'),
     path('csrf_cookie/', set_csrf_cookie, name='set_csrf_cookie'),
+    path('follow/', followUser, name='followUser'),
+    path('report/', reportUser, name='reportUser'),
+    path('block/', blockUser, name='blockUser'),
+    path('unblock/', unblockUser, name='unblockUser'),
+    path('accept_follow_request/', acceptFollowRequest, name='acceptFollowRequest'),
+    path('reject_follow_request/', rejectFollowRequest, name='rejectFollowRequest'),
 ]
