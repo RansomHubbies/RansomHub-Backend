@@ -17,7 +17,8 @@ from django_recaptcha.widgets import ReCaptchaV2Checkbox
 from django.http import JsonResponse
 from backend.settings import RECAPTCHA_PRIVATE_KEY
 from django.middleware.csrf import get_token
-
+from django.utils import timezone
+from datetime import timedelta
 
 import random
 import os
@@ -244,19 +245,33 @@ def logout_view(request):
 @permission_classes([IsAuthenticated])
 def profile_view(request):
     """
-    Returns user profile data (username, email, profileImage).
+    Returns user profile data (username, email, profileImage, followRequests).
     """
 
     user = request.user
-    if(user.profile_picture):
+    if user.profile_picture:
         image_url = request.build_absolute_uri(user.profile_picture.url)
         image_url = image_url.replace("http://", "https://")
+    else:
+        image_url = "/default-profile.png"
+
+    # Prepare follow requests data
+    follow_requests_data = []
+    for follower in user.follow_requests.all():
+        follower_data = {
+            "first_name": follower.first_name,  # Assuming you have a first_name field in your CustomUser model
+            "username": follower.username,
+            "profile_picture": request.build_absolute_uri(follower.profile_picture.url) if follower.profile_picture else "/default-profile.png"
+        }
+        follow_requests_data.append(follower_data)
+
     data = {
         "username": user.username,
         "email": user.email,
-        "profileImage": image_url if user.profile_picture else "/default-profile.png",
-        "is_admin":user.is_superuser,
-        "is_approved":user.is_approved
+        "profileImage": image_url,
+        "is_admin": user.is_superuser,
+        "is_approved": user.is_approved,
+        "followRequests": follow_requests_data  # Add follow requests data to the response
     }
     return Response(data)
 
@@ -431,7 +446,7 @@ def verify_identity(request):
     }, status=201)
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def get_users(request):
 
     users = CustomUser.objects.filter(is_verified=True).exclude(is_superuser=True).exclude(is_suspended=True)
@@ -448,3 +463,238 @@ def get_users(request):
         })
 
     return Response(user_list, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
+def followUser(request):
+    print("check")
+    current_user = request.user
+    username_to_follow = request.data.get('username')
+    
+    if not username_to_follow:
+        return Response({"error": "Username is required"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        user_to_follow = CustomUser.objects.get(username=username_to_follow)
+    except CustomUser.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+    # Check if user is trying to follow themselves
+    if current_user == user_to_follow:
+        return Response({"error": "You cannot follow yourself"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Check if user is already following
+    if user_to_follow in current_user.following.all():
+        return Response({"error": "You are already following this user"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Check if user has blocked the current user
+    if current_user in user_to_follow.blocked_users.all():
+        return Response({"error": "You cannot follow this user"}, status=status.HTTP_403_FORBIDDEN)
+    
+    # Add to following list
+    user_to_follow.follow_requests.add(current_user)
+    
+    return Response({"message": f"forllow request sent to {username_to_follow}"}, status=status.HTTP_200_OK)
+
+BLOCK_COOLDOWN_TIME = 600 
+MAX_BLOCKS_PER_HOUR = 5
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def reportUser(request):
+    current_user = request.user
+    username_to_report = request.data.get('username')
+    reason = request.data.get('reason', 'No reason provided')
+    
+    if not username_to_report:
+        return Response({"error": "Username is required"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        user_to_report = CustomUser.objects.get(username=username_to_report)
+    except CustomUser.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+    # Check if user is trying to report themselves
+    if current_user == user_to_report:
+        return Response({"error": "You cannot report yourself"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Block the user as part of reporting
+    if user_to_report not in current_user.blocked_users.all():
+        current_user.blocked_users.add(user_to_report)
+        
+        # Remove from followers/following if exists
+        if user_to_report in current_user.followers.all():
+            current_user.followers.remove(user_to_report)
+        if user_to_report in current_user.following.all():
+            current_user.following.remove(user_to_report)
+        if current_user in user_to_report.followers.all():
+            user_to_report.followers.remove(current_user)
+        if current_user in user_to_report.following.all():
+            user_to_report.following.remove(current_user)
+    
+    # Here you would typically save the report to a database
+    # For this example, we're just returning success
+    create_activity_log(
+        user=current_user, 
+        action_type='USER_REPORT', 
+        description=f'Reported user: {username_to_report} for: {reason}',
+        ip_address=request.META.get('REMOTE_ADDR')
+    )
+    
+    return Response({
+        "message": f"User {username_to_report} has been reported and blocked",
+        "reason": reason
+    }, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def blockUser(request):
+    current_user = request.user
+    username_to_block = request.data.get('username')
+    
+    if not username_to_block:
+        return Response({"error": "Username is required"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        user_to_block = CustomUser.objects.get(username=username_to_block)
+    except CustomUser.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+    # Check if user is trying to block themselves
+    if current_user == user_to_block:
+        return Response({"error": "You cannot block yourself"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Check cooldown period
+    now = timezone.now()
+    if current_user.last_block_time and (now - current_user.last_block_time).total_seconds() < BLOCK_COOLDOWN_TIME:
+        return Response({"error": "You need to wait before blocking/unblocking again."}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+    
+    # Check if user has exceeded the maximum number of blocks in the last hour
+    if current_user.block_action_count >= MAX_BLOCKS_PER_HOUR:
+        return Response({"error": "You have reached the maximum number of blocks allowed per hour."}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+    # Add to blocked list if not already blocked
+    if user_to_block not in current_user.blocked_users.all():
+        current_user.blocked_users.add(user_to_block)
+        
+        # Remove from followers/following if exists
+        if user_to_block in current_user.followers.all():
+            current_user.followers.remove(user_to_block)
+        if user_to_block in current_user.following.all():
+            current_user.following.remove(user_to_block)
+        if current_user in user_to_block.followers.all():
+            user_to_block.followers.remove(current_user)
+        if current_user in user_to_block.following.all():
+            user_to_block.following.remove(current_user)
+
+        # Update block action count and last block time
+        current_user.block_action_count += 1
+        current_user.last_block_time = now
+        current_user.save()
+
+        return Response({"message": f"User {username_to_block} has been blocked"}, status=status.HTTP_200_OK)
+    else:
+        return Response({"message": f"User {username_to_block} is already blocked"}, status=status.HTTP_200_OK)
+    
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def unblockUser(request):
+    current_user = request.user
+    username_to_unblock = request.data.get('username')
+    
+    if not username_to_unblock:
+        return Response({"error": "Username is required"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        user_to_unblock = CustomUser.objects.get(username=username_to_unblock)
+    except CustomUser.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+    # Check if user is trying to unblock themselves
+    if current_user == user_to_unblock:
+        return Response({"error": "You cannot unblock yourself"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Check cooldown period
+    now = timezone.now()
+    if current_user.last_block_time and (now - current_user.last_block_time).total_seconds() < BLOCK_COOLDOWN_TIME:
+        return Response({"error": "You need to wait before blocking/unblocking again."}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+    # Remove from blocked list if currently blocked
+    if user_to_unblock in current_user.blocked_users.all():
+        current_user.blocked_users.remove(user_to_unblock)
+
+        # Update last block time and reset action count
+        current_user.last_block_time = now
+        current_user.block_action_count = max(0, current_user.block_action_count - 1)  # Decrease count if needed
+        current_user.save()
+
+        return Response({"message": f"User {username_to_unblock} has been unblocked"}, status=status.HTTP_200_OK)
+    else:
+        return Response({"message": f"User {username_to_unblock} is not blocked"}, status=status.HTTP_200_OK)
+    
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def acceptFollowRequest(request):
+    """
+    Accept a follow request from another user.
+    """
+    current_user = request.user
+    username = request.data.get('username')
+    
+    if not username:
+        return Response({"error": "Username is required"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        requester = CustomUser.objects.get(username=username)
+    except CustomUser.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+    # Check if there is a pending follow request
+    if requester not in current_user.follow_requests.all():
+        return Response({"error": "No follow request from this user"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Remove from follow requests
+    current_user.follow_requests.remove(requester)
+    
+    # Add to followers
+    current_user.followers.add(requester)
+    
+    # Add to following of the requester
+    requester.following.add(current_user)
+    
+    return Response({
+        "message": f"Follow request from {username} has been accepted",
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def rejectFollowRequest(request):
+    """
+    Reject a follow request from another user.
+    """
+    current_user = request.user
+    username = request.data.get('username')
+    
+    if not username:
+        return Response({"error": "Username is required"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        requester = CustomUser.objects.get(username=username)
+    except CustomUser.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+    # Check if there is a pending follow request
+    if requester not in current_user.follow_requests.all():
+        return Response({"error": "No follow request from this user"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Remove from follow requests
+    current_user.follow_requests.remove(requester)
+    
+    return Response({
+        "message": f"Follow request from {username} has been rejected",
+    }, status=status.HTTP_200_OK)

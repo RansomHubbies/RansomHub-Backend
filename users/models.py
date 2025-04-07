@@ -26,6 +26,16 @@ class CustomUser(AbstractUser):
         blank=True,
         help_text="Specific permissions for this user."
     )
+
+
+    followers = models.ManyToManyField('self', symmetrical=False, related_name='following_me', blank=True)
+    following = models.ManyToManyField('self', symmetrical=False, related_name='followed_by_me', blank=True)
+    blocked_users = models.ManyToManyField('self', symmetrical=False, related_name='blocked_by', blank=True)
+    follow_requests = models.ManyToManyField('self', symmetrical=False, related_name='requested_to_follow', blank=True)
+    
+    last_block_time = models.DateTimeField(null=True, blank=True)
+    block_action_count = models.IntegerField(default=0)
+
     def __str__(self):
         return self.email
     
