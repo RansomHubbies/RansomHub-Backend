@@ -1,6 +1,19 @@
 from django.urls import path
-from .views import send_message, send_group_message, get_group_messages, create_group, get_messages, add_group_members, get_groups, get_all_groups, get_user_public_key, send_file, send_group_file
 
+from .views import (
+    add_group_members,
+    create_group,
+    get_all_groups,
+    get_blockchain_messages,
+    get_group_messages,
+    get_groups,
+    get_messages,
+    get_user_public_key,
+    send_file,
+    send_group_file,
+    send_group_message,
+    send_message,
+)
 
 urlpatterns = [
     path("send_message", send_message, name="message"),
@@ -14,4 +27,5 @@ urlpatterns = [
     path("get_user_public_key", get_user_public_key, name="get_user_public_key"),
     path("send_file", send_file, name="send_file"),
     path("send_group_file", send_group_file, name="send_group_file"),
+    path("get_blockchain_messages", get_blockchain_messages, name="get_blockchain_messages"),
 ]
