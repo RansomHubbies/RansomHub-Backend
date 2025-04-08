@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import signup_view, verify_otp, resendotp, login,logout_view, profile_view, refresh_token,reset_password, reset_password_confirm,send_reset_otp,upload_image, update_username, verify_identity,verify_captcha, get_users,set_csrf_cookie, followUser, reportUser, blockUser, unblockUser, acceptFollowRequest, rejectFollowRequest
+from .views import signup_view, verify_otp, resendotp, login,logout_view, profile_view, refresh_token,reset_password, reset_password_confirm,send_reset_otp,upload_image, update_username, verify_identity,verify_captcha, get_users,set_csrf_cookie, followUser, reportUser, blockUser, unblockUser, acceptFollowRequest, rejectFollowRequest, create_post, get_posts, toggle_like
 
 urlpatterns = [
     path('signup/', signup_view, name="signup"),
@@ -24,4 +24,7 @@ urlpatterns = [
     path('unblock/', unblockUser, name='unblockUser'),
     path('accept_follow_request/', acceptFollowRequest, name='acceptFollowRequest'),
     path('reject_follow_request/', rejectFollowRequest, name='rejectFollowRequest'),
+    path('create_post/', create_post, name='create_post'),
+    path('get_posts/', get_posts, name='create_post'),
+    path('toggle_like/', toggle_like, name='toggle_like'),
 ]
