@@ -19,6 +19,7 @@ from backend.settings import RECAPTCHA_PRIVATE_KEY
 from django.middleware.csrf import get_token
 from django.utils import timezone
 from datetime import timedelta
+from chat.models import Message, FileMessage
 
 import random
 import os
@@ -315,8 +316,11 @@ def reset_password_confirm(request):
     email = request.data.get("email")
     otp = request.data.get("otp")
     new_password = request.data.get("new_password")
+    public_key = request.data.get("public_key")
+    encrypted_private_key = request.data.get("encrypted_private_key")
+    private_key_salt = request.data.get("private_key_salt")
 
-    if not email or not otp or not new_password:
+    if not email or not otp or not new_password or not public_key or not encrypted_private_key or not private_key_salt:
         return Response({"error": "All fields are required."}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
@@ -328,6 +332,16 @@ def reset_password_confirm(request):
 
         # Reset password
         user.password = make_password(new_password)
+        user.public_key = public_key
+        user.encrypted_private_key = encrypted_private_key
+        user.private_key_salt = private_key_salt
+        
+        # delete all the Messages and files sent or received by the user
+        Message.objects.filter(sender=user).delete()
+        Message.objects.filter(recipient=user).delete()
+        FileMessage.objects.filter(sender=user).delete()
+        FileMessage.objects.filter(recipient=user).delete()
+
         user.reset_otp = None  # Clear OTP after use
         user.save()
         create_activity_log(
