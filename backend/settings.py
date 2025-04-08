@@ -156,14 +156,18 @@ MEDIA_URL = '/media/'
 # MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 #production
-STATIC_ROOT = "/var/www/RansomHub-Backend/static/"  
+# STATIC_ROOT = "/var/www/RansomHub-Backend/static/"  
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')  # For local development
+
+
 
 
 CORS_ALLOW_CREDENTIALS = True  # For cross-domain cookies
 CORS_EXPOSE_HEADERS = ['Content-Type', 'Authorization']
 
 #Production
-MEDIA_ROOT = "/var/www/RansomHub-Backend/media/"  
+# MEDIA_ROOT = "/var/www/RansomHub-Backend/media/"  
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # For local development
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
