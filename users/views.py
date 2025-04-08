@@ -418,8 +418,8 @@ def upload_image(request):
     if file_extension not in valid_extensions:
         return Response({"error": "Invalid file type. Only JPEG, JPG, and PNG are allowed."}, status=status.HTTP_400_BAD_REQUEST)
 
-    if profile_image.size > 5 * 1024 * 1024:
-        return Response({"error": "File size exceeds 5MB. "}, status=status.HTTP_400_BAD_REQUEST)
+    if profile_image.size > 1 * 1024 * 1024:
+        return Response({"error": "File size exceeds 1MB. "}, status=status.HTTP_400_BAD_REQUEST)
 
     user.profile_picture = profile_image
     user.save()
@@ -442,7 +442,7 @@ def verify_identity(request):
     
     # Validate file type and size
     allowed_types = ['image/jpeg', 'image/png', 'application/pdf']
-    max_size = 5 * 1024 * 1024  # 5MB
+    max_size = 1 * 1024 * 1024  # 1MB
     
     if identity_proof.content_type not in allowed_types:
         return Response({'error': 'Invalid file type'}, status=400)
