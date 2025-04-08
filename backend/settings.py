@@ -168,7 +168,9 @@ CORS_ALLOW_CREDENTIALS = True  # For cross-domain cookies
 CORS_EXPOSE_HEADERS = ['Content-Type', 'Authorization']
 
 #Production
-MEDIA_ROOT = "/var/www/RansomHub-Backend/media/"  
+MEDIA_ROOT = "/var/www/media/"  
+
+
 
 # Development
 # MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # For local development
