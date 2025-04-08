@@ -3,7 +3,8 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.authtoken.models import Token
-from .models import CustomUser
+from django.db import models
+from .models import CustomUser, Post
 from django.core.mail import send_mail
 from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
@@ -20,6 +21,7 @@ from django.middleware.csrf import get_token
 from django.utils import timezone
 from datetime import timedelta
 from chat.models import Message, FileMessage
+from django.utils import timezone
 
 import random
 import os
@@ -711,4 +713,134 @@ def rejectFollowRequest(request):
     
     return Response({
         "message": f"Follow request from {username} has been rejected",
+    }, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_post(request):
+    user = request.user
+    one_liner = request.data.get('one_liner')
+    image = request.FILES.get('image')
+
+
+    # Validate input
+    if not one_liner:
+        return Response({"error": "One-liner is required."}, status=status.HTTP_400_BAD_REQUEST)
+    if not image:
+        return Response({"error": "Profile image is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+    valid_extensions = ['.jpg', '.jpeg', '.png']
+    file_extension = os.path.splitext(image.name)[1].lower()
+
+
+    if file_extension not in valid_extensions:
+        return Response({"error": "Invalid file type. Only JPEG, JPG, and PNG are allowed."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+    if image.size > 1 * 1024 * 1024:
+        return Response({"error": "File size exceeds 1MB. "}, status=status.HTTP_400_BAD_REQUEST)
+
+
+    today = timezone.now().date()
+    post_count = Post.objects.filter(user=user, created_at__date=today).count()
+   
+    if post_count >= 2:
+        return Response({"error": "You can only create 2 posts per day."}, status=status.HTTP_403_FORBIDDEN)
+
+
+    # Create the post
+    post = Post(user=user, one_liner=one_liner, image=image)
+    post.save()
+
+
+    return Response({"message": "Post created successfully.", "post_id": post.id}, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_posts(request):
+    """
+    Get posts from the current user and users they follow,
+    created within the last 2 days.
+    """
+    user = request.user
+   
+    # Calculate the date 2 days ago from now
+    two_days_ago = timezone.now() - timedelta(days=2)
+   
+    # Get IDs of users the current user is following
+    following_users = user.following.all()
+   
+    # Query posts from current user AND users they follow
+    # that were created in the last 2 days
+    posts = Post.objects.filter(
+        models.Q(user=user) | models.Q(user__in=following_users),
+        created_at__gte=two_days_ago
+    ).order_by('-created_at')  # Most recent first
+   
+    if not posts.exists():
+        return Response({"message": "No posts found in the last 2 days."}, status=status.HTTP_200_OK)
+   
+    post_list = []
+    for post in posts:
+        image_url = request.build_absolute_uri(post.image.url) if post.image else None
+        if image_url:
+            image_url = image_url.replace("http://", "https://")
+           
+        profile_pic = request.build_absolute_uri(post.user.profile_picture.url) if post.user.profile_picture else "/default-profile.png"
+        if profile_pic.startswith("http://"):
+            profile_pic = profile_pic.replace("http://", "https://")
+       
+        is_liked = post.likes.filter(id=user.id).exists()
+       
+        post_list.append({
+            "id": post.id,
+            "username": post.user.username,
+            "user_fullname": post.user.first_name,
+            "one_liner": post.one_liner,
+            "created_at": post.created_at,
+            "image": image_url,
+            "profile_picture": profile_pic,
+            "like_count": post.likes.count(),
+            "is_liked": is_liked
+        })
+   
+    return Response(post_list, status=status.HTTP_200_OK)
+
+
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def toggle_like(request):
+    """
+    Toggle like status on a post.
+    """
+    user = request.user
+    post_id = request.data.get('post_id')
+   
+    if not post_id:
+        return Response({"error": "Post ID is required."}, status=status.HTTP_400_BAD_REQUEST)
+   
+    try:
+        post = Post.objects.get(id=post_id)
+    except Post.DoesNotExist:
+        return Response({"error": "Post not found."}, status=status.HTTP_404_NOT_FOUND)
+   
+    if user in post.user.blocked_users.all():
+        return Response({"error": "You cannot interact with this post."}, status=status.HTTP_403_FORBIDDEN)
+   
+    if post.likes.filter(id=user.id).exists():
+        post.likes.remove(user)
+        action = "unliked"
+    else:
+        post.likes.add(user)
+        action = "liked"
+   
+    return Response({
+        "message": f"Post successfully {action}.",
+        "post_id": post.id,
+        "like_count": post.likes.count(),
+        "is_liked": action == "liked"
     }, status=status.HTTP_200_OK)

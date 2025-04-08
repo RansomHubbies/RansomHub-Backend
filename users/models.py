@@ -1,6 +1,9 @@
 from django.contrib.auth.models import AbstractUser, Group, Permission
 from django.db import models
+from django.core.exceptions import ValidationError  # Add this import
+from django.conf import settings
 import random
+from django.utils import timezone
 
 class CustomUser(AbstractUser):
     email = models.EmailField(unique=True)
@@ -45,4 +48,27 @@ class CustomUser(AbstractUser):
         self.save()
 
 
+class Post(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='posts')
+    one_liner = models.CharField(max_length=511)  
+    created_at = models.DateTimeField(auto_now_add=True)  
+    updated_at = models.DateTimeField(auto_now=True)
+    likes = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='liked_posts', blank=True)
+    image = models.ImageField(upload_to='post_images/', null=True, blank=True)
+    def __str__(self):
+        return f"{self.one_liner} by {self.user.email} on {self.created_at.strftime('%Y-%m-%d %H:%M:%S')}"
+
+
+    def clean(self):
+        """Validate the number of posts a user can make in one day."""
+        today = timezone.now().date()
+        post_count = Post.objects.filter(user=self.user, created_at__date=today).count()
+        if post_count >= 2:
+            raise ValidationError("You can only create 2 posts per day.")
+
+
+    def save(self, *args, **kwargs):
+        """Override the save method to include validation."""
+        self.clean()  # Call the clean method to enforce the post limit
+        super().save(*args, **kwargs)
 
