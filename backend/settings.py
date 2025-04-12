@@ -181,15 +181,15 @@ MEDIA_ROOT = "/var/www/media/"
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOWED_ORIGINS = [
-    "http:/192.168.2.233",
-    "https:/192.168.2.233",
+    "http:/192.168.2.248",
+    "https:/192.168.2.248",
     # "http://localhost:3000",  # Add production URL when deployed
     # "http://127.0.0.1:3000",  # Add production URL when deployed
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://192.168.2.233",  # Add your frontend domain here
-    "http://192.168.2.233",  # Add your frontend domain here
+    "https://192.168.2.248",  # Add your frontend domain here
+    "http://192.168.2.248",  # Add your frontend domain here
     # "http://127.0.0.1:3000",  # Add production URL when deployed
 
 ]
@@ -211,7 +211,7 @@ CSRF_USE_SESSIONS = False  # Keep CSRF stored in cookies
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost','192.168.2.233','192.168.48.121', '127.0.0.1:8000',]
+ALLOWED_HOSTS = ['localhost','192.168.2.248','192.168.48.121', '127.0.0.1:8000',]
 # ALLOWED_HOSTS = ["*"]
 
 RECAPTCHA_PUBLIC_KEY ="6LeyqwMrAAAAAA6w1vcznR_GClUqOqBSbnwKjRvh"
