@@ -24,7 +24,7 @@ jobs:
       - name: Sync Files to /var/www
         run: |
           sudo rsync -av --delete $GITHUB_WORKSPACE/RansomHub-Backend/ /var/www/RansomHub-Backend/
-          sudo chown -R iiitd:iiitd /var/www/RansomHub-Backend/
+          sudo chown -R manav-mittal:manav-mittal /var/www/RansomHub-Backend/
 
       - name: Set up Python
         uses: actions/setup-python@v4
